@@ -167,6 +167,8 @@ services:
     depends_on:
       keycloak:
         condition: service_healthy
+      institution-service:
+        condition: service_healthy
 
   institution-service:
     build:
@@ -184,6 +186,12 @@ services:
       KEYCLOAK_REALM: ${KEYCLOAK_REALM:-microlinks}
     networks:
       - microlinks-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:8082/actuator/health | grep -q UP || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
     depends_on:
       postgres-institution:
         condition: service_healthy
@@ -212,13 +220,19 @@ services:
       INSTITUTION_SERVICE_URL: http://institution-service:8082
     networks:
       - microlinks-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:8083/actuator/health | grep -q UP || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
     depends_on:
       postgres-operation:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
       institution-service:
-        condition: service_started
+        condition: service_healthy
 
   rapport-service:
     build:
@@ -236,6 +250,12 @@ services:
       INSTITUTION_SERVICE_URL: http://institution-service:8082
     networks:
       - microlinks-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:8084/actuator/health | grep -q UP || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
     depends_on:
       postgres-rapport:
         condition: service_healthy
@@ -263,10 +283,18 @@ services:
       KEYCLOAK_REALM: ${KEYCLOAK_REALM:-microlinks}
     networks:
       - microlinks-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:8085/actuator/health | grep -q UP || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
     depends_on:
       postgres-notification:
         condition: service_healthy
       rabbitmq:
+        condition: service_healthy
+      keycloak:
         condition: service_healthy
 
   # ============================================

@@ -2,6 +2,7 @@ package com.microlinks.gateway.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverterAdapter;
@@ -26,6 +27,10 @@ public class SecurityConfig {
         return http
             .csrf(ServerHttpSecurity.CsrfSpec::disable)
             .authorizeExchange(exchanges -> exchanges
+                // Les requêtes de pré-vérification CORS (OPTIONS) ne portent pas de
+                // jeton JWT : elles doivent être autorisées sinon le navigateur
+                // bloque l'appel réel avec une erreur CORS.
+                .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .pathMatchers("/actuator/health", "/actuator/info", "/fallback").permitAll()
                 .pathMatchers("/ws/**").permitAll()
                 .anyExchange().authenticated()

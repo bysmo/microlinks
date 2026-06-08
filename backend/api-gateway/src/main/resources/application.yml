@@ -10,12 +10,25 @@ spring:
       globalcors:
         cors-configurations:
           '[/**]':
-            allowedOrigins:
-              - "http://localhost:3000"
-              - "http://localhost:3001"
-              - "http://frontend:80"
-            allowedMethods: "*"
+            # allowedOriginPatterns (et non allowedOrigins) est requis pour pouvoir
+            # utiliser des jokers (*) tout en conservant allowCredentials=true.
+            # Cela évite les erreurs CORS lorsque le frontend tourne sur un port de
+            # dev (Vite: 5173/3000) ou derrière une URL de prévisualisation.
+            allowedOriginPatterns:
+              - "http://localhost:[*]"
+              - "http://127.0.0.1:[*]"
+              - "http://frontend:[*]"
+              - "https://*.preview.abacusai.app"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - PATCH
+              - DELETE
+              - OPTIONS
             allowedHeaders: "*"
+            exposedHeaders:
+              - Content-Disposition
             allowCredentials: true
             maxAge: 3600
 

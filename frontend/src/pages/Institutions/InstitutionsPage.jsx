@@ -29,6 +29,7 @@ export default function InstitutionsPage() {
   const [zones, setZones] = useState([]);
   const [correspondantBanks, setCorrespondantBanks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [stats, setStats] = useState(null);
 
   // Search and Filters
@@ -74,30 +75,58 @@ export default function InstitutionsPage() {
     fetchInstitutions();
   }, [page, typeFilter, statutFilter]);
 
+  // Construit un message d'erreur lisible à partir d'une erreur Axios.
+  const describeError = (e, fallback) => {
+    if (e?.response) {
+      // Le serveur a répondu avec un statut d'erreur
+      const status = e.response.status;
+      const serverMsg = e.response.data?.message;
+      if (status === 401) return "Session expirée ou non authentifiée. Veuillez vous reconnecter.";
+      if (status === 403) return "Accès refusé : droits insuffisants pour cette ressource.";
+      if (status === 503) return "Service des institutions momentanément indisponible. Réessayez dans un instant.";
+      return serverMsg || `${fallback} (code ${status})`;
+    }
+    if (e?.request) {
+      // La requête est partie mais aucune réponse (réseau/CORS/passerelle injoignable)
+      return `${fallback} : impossible de joindre le serveur (réseau, CORS ou passerelle indisponible).`;
+    }
+    return fallback;
+  };
+
   const fetchStats = async () => {
     try {
       const res = await institutionApi.getStats();
       setStats(res.data);
     } catch (e) {
-      console.warn('Erreur chargement stats:', e.message);
+      // Les statistiques sont non bloquantes : on journalise sans alerter l'utilisateur
+      console.warn('Erreur chargement stats:', describeError(e, 'Statistiques indisponibles'), e);
     }
   };
 
   const fetchMetadata = async () => {
+    // On charge zones et banques indépendamment : l'échec de l'un ne doit pas
+    // empêcher l'autre de se charger.
     try {
-      const [zonesRes, banksRes] = await Promise.all([
-        zoneMonetaireApi.findAll(),
-        institutionApi.findAll({ type: 'BANQUE', size: 100 }),
-      ]);
+      const zonesRes = await zoneMonetaireApi.findAll();
       setZones(zonesRes.data || []);
-      setCorrespondantBanks(banksRes.data.content || []);
     } catch (e) {
-      toast.error('Erreur lors du chargement des référentiels (zones/banques)');
+      console.error('Erreur chargement zones monétaires:', describeError(e, 'Zones indisponibles'), e);
+      toast.error('Erreur lors du chargement des référentiels (zones/banques)', {
+        id: 'metadata-error', // évite les toasts dupliqués
+      });
+    }
+
+    try {
+      const banksRes = await institutionApi.findAll({ type: 'BANQUE', size: 100 });
+      setCorrespondantBanks(banksRes.data?.content || []);
+    } catch (e) {
+      console.error('Erreur chargement banques correspondantes:', describeError(e, 'Banques indisponibles'), e);
     }
   };
 
   const fetchInstitutions = async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const res = await institutionApi.findAll({
         search: search.trim() || undefined,
@@ -106,14 +135,26 @@ export default function InstitutionsPage() {
         page,
         size: 8,
       });
-      setInstitutions(res.data.content || []);
-      setTotalPages(res.data.totalPages || 0);
-      setTotalElements(res.data.totalElements || 0);
+      setInstitutions(res.data?.content || []);
+      setTotalPages(res.data?.totalPages || 0);
+      setTotalElements(res.data?.totalElements || 0);
     } catch (e) {
-      toast.error('Erreur lors du chargement des institutions');
+      const msg = describeError(e, 'Erreur lors du chargement des institutions');
+      console.error('Erreur chargement institutions:', msg, e);
+      setLoadError(msg);
+      setInstitutions([]);
+      setTotalPages(0);
+      setTotalElements(0);
+      toast.error(msg, { id: 'institutions-error' }); // évite les toasts dupliqués
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRetry = () => {
+    fetchMetadata();
+    fetchStats();
+    fetchInstitutions();
   };
 
   const handleSearchSubmit = (e) => {
@@ -347,6 +388,23 @@ export default function InstitutionsPage() {
           </select>
         </div>
       </div>
+
+      {/* Error banner with retry */}
+      {loadError && !loading && (
+        <div className="glass-card p-4 border border-red-500/30 bg-red-500/5 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 text-red-500">
+            <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+            <div>
+              <p className="font-semibold text-sm">Impossible de charger les institutions</p>
+              <p className="text-xs text-red-400/90">{loadError}</p>
+            </div>
+          </div>
+          <button onClick={handleRetry} className="btn-secondary flex items-center gap-2 text-xs whitespace-nowrap">
+            <RefreshCw className="w-4 h-4" />
+            Réessayer
+          </button>
+        </div>
+      )}
 
       {/* List Table */}
       <div className="data-table-container">
