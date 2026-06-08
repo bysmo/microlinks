@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="op-002" author="microlinks">
+        <createTable tableName="operations">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()"><constraints primaryKey="true" nullable="false"/></column>
+            <column name="reference_unique" type="VARCHAR(50)"><constraints nullable="false" unique="true"/></column>
+            <column name="type_operation" type="VARCHAR(20)"><constraints nullable="false"/></column>
+            <column name="statut" type="VARCHAR(40)"><constraints nullable="false"/></column>
+            <column name="date_operation" type="DATE"><constraints nullable="false"/></column>
+            <column name="date_valeur" type="DATE"/>
+            <column name="montant" type="DECIMAL(15,2)"><constraints nullable="false"/></column>
+            <column name="devise" type="VARCHAR(10)"><constraints nullable="false"/></column>
+            <column name="motif" type="TEXT"/>
+            <!-- Emetteur -->
+            <column name="institution_emettrice_id" type="UUID"><constraints nullable="false"/></column>
+            <column name="nom_institution_emettrice" type="VARCHAR(200)"><constraints nullable="false"/></column>
+            <column name="compte_donneur_ordre" type="VARCHAR(50)"><constraints nullable="false"/></column>
+            <column name="nom_donneur_ordre" type="VARCHAR(200)"><constraints nullable="false"/></column>
+            <column name="banque_correspondante_emettrice_id" type="UUID"/>
+            <column name="nom_banque_correspondante_emettrice" type="VARCHAR(200)"/>
+            <column name="compte_correspondance_emetteur" type="VARCHAR(50)"/>
+            <!-- Beneficiaire -->
+            <column name="institution_beneficiaire_id" type="UUID"><constraints nullable="false"/></column>
+            <column name="nom_institution_beneficiaire" type="VARCHAR(200)"><constraints nullable="false"/></column>
+            <column name="compte_beneficiaire" type="VARCHAR(50)"><constraints nullable="false"/></column>
+            <column name="nom_beneficiaire" type="VARCHAR(200)"><constraints nullable="false"/></column>
+            <column name="banque_correspondante_receptrice_id" type="UUID"/>
+            <column name="nom_banque_correspondante_receptrice" type="VARCHAR(200)"/>
+            <column name="compte_correspondance_recepteur" type="VARCHAR(50)"/>
+            <!-- Cheque -->
+            <column name="numero_cheque" type="VARCHAR(30)"/>
+            <!-- Tracabilite -->
+            <column name="cree_par" type="VARCHAR(100)"><constraints nullable="false"/></column>
+            <column name="institution_createur_id" type="UUID"><constraints nullable="false"/></column>
+            <column name="commentaire_rejet" type="TEXT"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="NOW()"><constraints nullable="false"/></column>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="NOW()"><constraints nullable="false"/></column>
+        </createTable>
+        <createIndex tableName="operations" indexName="idx_op_reference"><column name="reference_unique"/></createIndex>
+        <createIndex tableName="operations" indexName="idx_op_statut"><column name="statut"/></createIndex>
+        <createIndex tableName="operations" indexName="idx_op_institution_emettrice"><column name="institution_emettrice_id"/></createIndex>
+        <createIndex tableName="operations" indexName="idx_op_institution_beneficiaire"><column name="institution_beneficiaire_id"/></createIndex>
+        <createIndex tableName="operations" indexName="idx_op_date_operation"><column name="date_operation"/></createIndex>
+    </changeSet>
+</databaseChangeLog>

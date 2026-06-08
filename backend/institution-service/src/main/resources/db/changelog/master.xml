@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <include file="db/changelog/v1/001-create-zones-monetaires.xml"/>
+    <include file="db/changelog/v1/002-create-institutions.xml"/>
+    <include file="db/changelog/v1/003-create-agences.xml"/>
+    <include file="db/changelog/v1/004-create-comptes-correspondance.xml"/>
+    <include file="db/changelog/v1/005-insert-initial-data.xml"/>
+    <include file="db/changelog/v1/006-add-banking-info.xml"/>
+
+</databaseChangeLog>

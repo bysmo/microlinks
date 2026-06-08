@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="005" author="microlinks">
+        <!-- Zones monétaires d'Afrique subsaharienne -->
+        <insert tableName="zones_monetaires">
+            <column name="id" valueComputed="gen_random_uuid()"/>
+            <column name="code">BCEAO</column>
+            <column name="libelle">Banque Centrale des États de l'Afrique de l'Ouest</column>
+            <column name="devise">XOF</column>
+            <column name="description">Zone UEMOA - Franc CFA Ouest-Africain</column>
+            <column name="statut">ACTIF</column>
+        </insert>
+        <insert tableName="zones_monetaires">
+            <column name="id" valueComputed="gen_random_uuid()"/>
+            <column name="code">BEAC</column>
+            <column name="libelle">Banque des États de l'Afrique Centrale</column>
+            <column name="devise">XAF</column>
+            <column name="description">Zone CEMAC - Franc CFA d'Afrique Centrale</column>
+            <column name="statut">ACTIF</column>
+        </insert>
+        <insert tableName="zones_monetaires">
+            <column name="id" valueComputed="gen_random_uuid()"/>
+            <column name="code">BCRG</column>
+            <column name="libelle">Banque Centrale de la République de Guinée</column>
+            <column name="devise">GNF</column>
+            <column name="description">Zone Guinée - Franc Guinéen</column>
+            <column name="statut">ACTIF</column>
+        </insert>
+        <insert tableName="zones_monetaires">
+            <column name="id" valueComputed="gen_random_uuid()"/>
+            <column name="code">BNR</column>
+            <column name="libelle">Banque Nationale du Rwanda</column>
+            <column name="devise">RWF</column>
+            <column name="description">Zone Rwanda - Franc Rwandais</column>
+            <column name="statut">ACTIF</column>
+        </insert>
+        <insert tableName="zones_monetaires">
+            <column name="id" valueComputed="gen_random_uuid()"/>
+            <column name="code">BCC</column>
+            <column name="libelle">Banque Centrale du Congo</column>
+            <column name="devise">CDF</column>
+            <column name="description">Zone RDC - Franc Congolais</column>
+            <column name="statut">ACTIF</column>
+        </insert>
+    </changeSet>
+</databaseChangeLog>

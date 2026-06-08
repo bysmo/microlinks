@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="006-add-banking-info" author="antigravity">
+        <addColumn tableName="institutions">
+            <column name="code_banque_regional" type="varchar(50)"/>
+            <column name="code_bic" type="varchar(20)"/>
+            <column name="code_participant_rtgs" type="varchar(50)"/>
+            <column name="code_microlink" type="varchar(50)">
+                <constraints unique="true"/>
+            </column>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

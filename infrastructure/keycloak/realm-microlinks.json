@@ -1,0 +1,360 @@
+{
+  "id": "microlinks",
+  "realm": "microlinks",
+  "displayName": "MicroLinks",
+  "displayNameHtml": "<span style='font-weight:bold'>Micro</span>Links",
+  "loginTheme": "microlinks",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "accessTokenLifespan": 3600,
+  "refreshTokenMaxReuse": 0,
+  "clients": [
+    {
+      "clientId": "microlinks-frontend",
+      "name": "MicroLinks Frontend",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "rootUrl": "http://localhost:3000",
+      "baseUrl": "/",
+      "redirectUris": [
+        "http://localhost:3000/*",
+        "http://localhost:3001/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:8080"
+      ],
+      "protocol": "openid-connect",
+      "fullScopeAllowed": true,
+      "protocolMappers": [
+        {
+          "name": "institution_id",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "institution_id",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "institution_id",
+            "jsonType.label": "String",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "institution_nom",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "institution_nom",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "institution_nom",
+            "jsonType.label": "String",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "MICROLINKS-UI",
+      "name": "MicroLinks UI Client",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "rootUrl": "http://localhost:3000",
+      "baseUrl": "/",
+      "redirectUris": [
+        "http://localhost:3000/*",
+        "http://localhost:3001/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:8080"
+      ],
+      "protocol": "openid-connect",
+      "fullScopeAllowed": true,
+      "protocolMappers": [
+        {
+          "name": "institution_id",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "institution_id",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "institution_id",
+            "jsonType.label": "String",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "institution_nom",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "institution_nom",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "institution_nom",
+            "jsonType.label": "String",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "microlinks-backend",
+      "name": "MicroLinks Backend",
+      "enabled": true,
+      "publicClient": false,
+      "bearerOnly": true,
+      "standardFlowEnabled": false,
+      "protocol": "openid-connect",
+      "fullScopeAllowed": true
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "ADMIN_PLATEFORME",
+        "description": "Administrateur global de la plateforme MicroLinks"
+      },
+      {
+        "name": "ADMIN_INSTITUTION",
+        "description": "Administrateur d'une institution (banque ou micro/méso-finance)"
+      },
+      {
+        "name": "AGENT_SAISIE",
+        "description": "Agent habilité à saisir des opérations"
+      },
+      {
+        "name": "AGENT_VALIDATION",
+        "description": "Agent habilité à valider des opérations"
+      },
+      {
+        "name": "LECTEUR",
+        "description": "Accès en lecture seule aux opérations et rapports"
+      },
+      {
+        "name": "ADMIN",
+        "description": "SaaS Platform Administrator",
+        "composite": true,
+        "composites": {
+          "realm": ["ADMIN_PLATEFORME"]
+        }
+      },
+      {
+        "name": "MESO_ADMIN",
+        "description": "Meso-finance Administrator",
+        "composite": true,
+        "composites": {
+          "realm": ["ADMIN_INSTITUTION", "LECTEUR"]
+        }
+      },
+      {
+        "name": "MESO_AGENT",
+        "description": "Meso-finance Saisie Agent",
+        "composite": true,
+        "composites": {
+          "realm": ["AGENT_SAISIE", "LECTEUR"]
+        }
+      },
+      {
+        "name": "MESO_VALID",
+        "description": "Meso-finance Validator Agent",
+        "composite": true,
+        "composites": {
+          "realm": ["AGENT_VALIDATION", "LECTEUR"]
+        }
+      },
+      {
+        "name": "BANK_ADMIN",
+        "description": "Bank Administrator",
+        "composite": true,
+        "composites": {
+          "realm": ["ADMIN_INSTITUTION", "LECTEUR"]
+        }
+      },
+      {
+        "name": "BANK_AGENT",
+        "description": "Bank Saisie Agent",
+        "composite": true,
+        "composites": {
+          "realm": ["AGENT_SAISIE", "LECTEUR"]
+        }
+      },
+      {
+        "name": "BANK_VALID",
+        "description": "Bank Validator Agent",
+        "composite": true,
+        "composites": {
+          "realm": ["AGENT_VALIDATION", "LECTEUR"]
+        }
+      }
+    ]
+  },
+  "users": [
+    {
+      "username": "saas.admin",
+      "email": "admin@microlinks.com",
+      "firstName": "Admin",
+      "lastName": "Plateforme",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Admin@SaaS2024",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["ADMIN"]
+    },
+    {
+      "username": "meso.admin",
+      "email": "meso.admin@microlinks.com",
+      "firstName": "Admin",
+      "lastName": "Meso",
+      "enabled": true,
+      "emailVerified": true,
+      "attributes": {
+        "institution_id": ["a2c918a2-2e55-46aa-83a3-d7efc4912cd3"],
+        "institution_nom": ["MesoFinance de l'Ouest"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "MesoAdmin@2024",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["MESO_ADMIN"]
+    },
+    {
+      "username": "meso.agent",
+      "email": "meso.agent@microlinks.com",
+      "firstName": "Agent",
+      "lastName": "Meso",
+      "enabled": true,
+      "emailVerified": true,
+      "attributes": {
+        "institution_id": ["a2c918a2-2e55-46aa-83a3-d7efc4912cd3"],
+        "institution_nom": ["MesoFinance de l'Ouest"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "MesoAgent@2024",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["MESO_AGENT"]
+    },
+    {
+      "username": "meso.valid",
+      "email": "meso.valid@microlinks.com",
+      "firstName": "Valid",
+      "lastName": "Meso",
+      "enabled": true,
+      "emailVerified": true,
+      "attributes": {
+        "institution_id": ["a2c918a2-2e55-46aa-83a3-d7efc4912cd3"],
+        "institution_nom": ["MesoFinance de l'Ouest"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "MesoValid@2024",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["MESO_VALID"]
+    },
+    {
+      "username": "bank.admin",
+      "email": "bank.admin@microlinks.com",
+      "firstName": "Admin",
+      "lastName": "Bank",
+      "enabled": true,
+      "emailVerified": true,
+      "attributes": {
+        "institution_id": ["b3d829b3-3f66-57bb-94b4-e8fcd5023de4"],
+        "institution_nom": ["Banque Atlantique Ouest"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "BankAdmin@2024",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["BANK_ADMIN"]
+    },
+    {
+      "username": "bank.agent",
+      "email": "bank.agent@microlinks.com",
+      "firstName": "Agent",
+      "lastName": "Bank",
+      "enabled": true,
+      "emailVerified": true,
+      "attributes": {
+        "institution_id": ["b3d829b3-3f66-57bb-94b4-e8fcd5023de4"],
+        "institution_nom": ["Banque Atlantique Ouest"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "BankAgent@2024",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["BANK_AGENT"]
+    },
+    {
+      "username": "bank.valid",
+      "email": "bank.valid@microlinks.com",
+      "firstName": "Valid",
+      "lastName": "Bank",
+      "enabled": true,
+      "emailVerified": true,
+      "attributes": {
+        "institution_id": ["b3d829b3-3f66-57bb-94b4-e8fcd5023de4"],
+        "institution_nom": ["Banque Atlantique Ouest"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "BankValid@2024",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["BANK_VALID"]
+    }
+  ],
+  "browserSecurityHeaders": {
+    "contentTypeOptions": "nosniff",
+    "xRobotsTag": "none",
+    "xFrameOptions": "SAMEORIGIN",
+    "contentSecurityPolicy": "frame-src 'self'; frame-ancestors 'self'; object-src 'none';"
+  },
+  "internationalizationEnabled": true,
+  "supportedLocales": ["fr", "en"],
+  "defaultLocale": "fr"
+}

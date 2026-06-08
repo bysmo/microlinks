@@ -1,0 +1,21 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: rapport-service
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_URL:http://localhost:8443}/realms/${KEYCLOAK_REALM:microlinks}
+
+services:
+  operation:
+    url: ${OPERATION_SERVICE_URL:http://localhost:8083}
+  institution:
+    url: ${INSTITUTION_SERVICE_URL:http://localhost:8082}
+
+springdoc:
+  api-docs:
+    path: /api-docs

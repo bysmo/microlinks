@@ -1,0 +1,130 @@
+package com.microlinks.operation.entity;
+
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
+
+@Entity
+@Table(name = "operations", indexes = {
+    @Index(name = "idx_op_reference", columnList = "reference_unique"),
+    @Index(name = "idx_op_statut", columnList = "statut"),
+    @Index(name = "idx_op_institution_emettrice", columnList = "institution_emettrice_id"),
+    @Index(name = "idx_op_institution_beneficiaire", columnList = "institution_beneficiaire_id"),
+    @Index(name = "idx_op_date_operation", columnList = "date_operation")
+})
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class Operation {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
+
+    @Column(name = "reference_unique", nullable = false, unique = true, length = 50)
+    private String referenceUnique;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type_operation", nullable = false, length = 20)
+    private TypeOperation typeOperation;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 40)
+    private StatutOperation statut;
+
+    @Column(name = "date_operation", nullable = false)
+    private LocalDate dateOperation;
+
+    @Column(name = "date_valeur")
+    private LocalDate dateValeur;
+
+    @Column(nullable = false, precision = 15, scale = 2)
+    private BigDecimal montant;
+
+    @Column(nullable = false, length = 10)
+    private String devise;
+
+    @Column(columnDefinition = "TEXT")
+    private String motif;
+
+    // =================== DONNEUR D'ORDRE ===================
+
+    @Column(name = "institution_emettrice_id", nullable = false)
+    private UUID institutionEmettriceId;
+
+    @Column(name = "nom_institution_emettrice", nullable = false, length = 200)
+    private String nomInstitutionEmettrice;
+
+    @Column(name = "compte_donneur_ordre", nullable = false, length = 50)
+    private String compteDonneurOrdre;
+
+    @Column(name = "nom_donneur_ordre", nullable = false, length = 200)
+    private String nomDonneurOrdre;
+
+    @Column(name = "banque_correspondante_emettrice_id")
+    private UUID banqueCorrespondanteEmettriceId;
+
+    @Column(name = "nom_banque_correspondante_emettrice", length = 200)
+    private String nomBanqueCorrespondanteEmettrice;
+
+    @Column(name = "compte_correspondance_emetteur", length = 50)
+    private String compteCorrespondanceEmetteur;
+
+    // =================== BÉNÉFICIAIRE ===================
+
+    @Column(name = "institution_beneficiaire_id", nullable = false)
+    private UUID institutionBeneficiaireId;
+
+    @Column(name = "nom_institution_beneficiaire", nullable = false, length = 200)
+    private String nomInstitutionBeneficiaire;
+
+    @Column(name = "compte_beneficiaire", nullable = false, length = 50)
+    private String compteBeneficiaire;
+
+    @Column(name = "nom_beneficiaire", nullable = false, length = 200)
+    private String nomBeneficiaire;
+
+    @Column(name = "banque_correspondante_receptrice_id")
+    private UUID banqueCorrespondanteReceptriceId;
+
+    @Column(name = "nom_banque_correspondante_receptrice", length = 200)
+    private String nomBanqueCorrespondanteReceptrice;
+
+    @Column(name = "compte_correspondance_recepteur", length = 50)
+    private String compteCorrespondanceRecepteur;
+
+    // =================== INFOS CHÈQUE ===================
+
+    @Column(name = "numero_cheque", length = 30)
+    private String numeroCheque;
+
+    // =================== TRAÇABILITÉ ===================
+
+    @OneToMany(mappedBy = "operation", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OrderBy("dateAction ASC")
+    private List<HistoriqueStatut> historique;
+
+    @Column(name = "cree_par", nullable = false, length = 100)
+    private String creePar;
+
+    @Column(name = "institution_createur_id", nullable = false)
+    private UUID institutionCreateurId;
+
+    @Column(name = "commentaire_rejet", columnDefinition = "TEXT")
+    private String commentaireRejet;
+
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
+}
