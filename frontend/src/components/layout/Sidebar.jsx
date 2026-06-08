@@ -3,7 +3,8 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Building2, Users, ArrowLeftRight,
   CheckSquare, FileBarChart2, Settings, ChevronLeft,
-  ChevronRight, LogOut, Bell, Link as LinkIcon
+  ChevronRight, LogOut, Bell, Link as LinkIcon,
+  Receipt, FileText
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -49,6 +50,20 @@ const menuItems = [
     icon: FileBarChart2,
     path: '/rapports',
     roles: ['ADMIN_PLATEFORME', 'ADMIN_INSTITUTION', 'AGENT_VALIDATION', 'LECTEUR'],
+  },
+  {
+    id: 'facturation',
+    label: 'Facturation',
+    icon: Receipt,
+    path: '/facturation',
+    roles: ['ADMIN_PLATEFORME'],
+  },
+  {
+    id: 'mes-factures',
+    label: 'Mes Factures',
+    icon: FileText,
+    path: '/mes-factures',
+    roles: ['ADMIN_INSTITUTION'],
   },
   {
     id: 'admin',

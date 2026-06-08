@@ -45,6 +45,79 @@ public class EmailNotificationService {
         }
     }
 
+    /**
+     * Envoie un email à l'administrateur d'une institution concernant sa facturation.
+     */
+    public void sendBillingEmail(String type, String message, String institutionNom,
+                                 String destinataire, String numero, String periode,
+                                 String montant, String devise, String dateEcheance) {
+        try {
+            String subject = "[MicroLinks] " + message
+                    + (numero != null ? " - Facture " + numero : "");
+
+            String htmlContent = buildBillingHtml(type, message, institutionNom,
+                    numero, periode, montant, devise, dateEcheance);
+
+            if (destinataire != null && !destinataire.isBlank()
+                    && fromEmail != null && !fromEmail.isBlank()) {
+                MimeMessage mimeMessage = mailSender.createMimeMessage();
+                MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
+                helper.setFrom(fromEmail, fromName);
+                helper.setTo(destinataire);
+                helper.setSubject(subject);
+                helper.setText(htmlContent, true);
+                // mailSender.send(mimeMessage); // Activer une fois SMTP configuré
+                log.info("Email facturation prêt pour {} -> {} ({})", institutionNom, destinataire, message);
+            } else {
+                log.info("Email facturation [{}] pour institution {} - destinataire non configuré", message, institutionNom);
+            }
+        } catch (Exception e) {
+            log.warn("Envoi email facturation non configuré ou erreur: {}", e.getMessage());
+        }
+    }
+
+    private String buildBillingHtml(String type, String message, String institutionNom,
+                                    String numero, String periode, String montant,
+                                    String devise, String dateEcheance) {
+        boolean alert = type != null && (type.contains("overdue") || type.contains("deactivated"));
+        String accent = alert ? "#c0392b" : "#1e40af";
+        return """
+            <!DOCTYPE html>
+            <html><head><meta charset="UTF-8"></head>
+            <body style="font-family: Arial, sans-serif; background:#f5f5f5; margin:0; padding:20px;">
+              <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:8px;overflow:hidden;">
+                <div style="background:%s;padding:24px;text-align:center;">
+                  <h1 style="color:#fff;margin:0;font-size:22px;">🔗 MicroLinks</h1>
+                  <p style="color:#dbeafe;margin:6px 0 0;">Facturation</p>
+                </div>
+                <div style="padding:24px;color:#334155;">
+                  <h2 style="margin-top:0;">%s</h2>
+                  <p>Bonjour <strong>%s</strong>,</p>
+                  <table style="width:100%%;border-collapse:collapse;">
+                    <tr><td style="padding:8px 0;color:#666;">Facture</td><td style="text-align:right;font-weight:bold;">%s</td></tr>
+                    <tr><td style="padding:8px 0;color:#666;">Période</td><td style="text-align:right;font-weight:bold;">%s</td></tr>
+                    <tr><td style="padding:8px 0;color:#666;">Montant</td><td style="text-align:right;font-weight:bold;">%s %s</td></tr>
+                    <tr><td style="padding:8px 0;color:#666;">Échéance</td><td style="text-align:right;font-weight:bold;">%s</td></tr>
+                  </table>
+                  <p style="margin-top:20px;">Connectez-vous à votre espace MicroLinks, rubrique « Mes factures », pour consulter le détail.</p>
+                </div>
+                <div style="background:#f5f5f5;padding:16px;text-align:center;color:#999;font-size:12px;">
+                  <p style="margin:0;">© 2024 MicroLinks Platform.</p>
+                </div>
+              </div>
+            </body></html>
+            """.formatted(
+                accent,
+                message != null ? message : "Notification de facturation",
+                institutionNom != null ? institutionNom : "",
+                numero != null ? numero : "-",
+                periode != null ? periode : "-",
+                montant != null ? montant : "0",
+                devise != null ? devise : "",
+                dateEcheance != null ? dateEcheance : "-"
+            );
+    }
+
     private String buildEmailHtml(String reference, String statut, String donneurOrdre,
                                    String beneficiaire, Object montant, String devise,
                                    String prochainActeur) {

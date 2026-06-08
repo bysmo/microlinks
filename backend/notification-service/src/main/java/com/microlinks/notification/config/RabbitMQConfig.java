@@ -14,9 +14,30 @@ public class RabbitMQConfig {
     @Value("${microlinks.rabbitmq.exchange}")
     private String exchange;
 
+    @Value("${microlinks.rabbitmq.billing-exchange:microlinks.billing.exchange}")
+    private String billingExchange;
+
     @Bean
     public TopicExchange operationsExchange() {
         return new TopicExchange(exchange, true, false);
+    }
+
+    // ---- Facturation ----
+    @Bean
+    public TopicExchange billingExchange() {
+        return new TopicExchange(billingExchange, true, false);
+    }
+
+    @Bean
+    public Queue billingQueue() {
+        return QueueBuilder.durable("microlinks.billing.notifications.queue").build();
+    }
+
+    @Bean
+    public Binding billingBinding(Queue billingQueue, TopicExchange billingExchange) {
+        return BindingBuilder.bind(billingQueue)
+                .to(billingExchange)
+                .with("billing.#");
     }
 
     @Bean

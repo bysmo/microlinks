@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!-- ============ TARIFS ============ -->
+    <changeSet id="billing-001-tarifs" author="microlinks">
+        <createTable tableName="tarifs">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="code" type="VARCHAR(50)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="libelle" type="VARCHAR(200)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="TEXT"/>
+            <column name="mode_paiement" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="montant" type="DECIMAL(18,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="devise" type="VARCHAR(3)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="actif" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(100)"/>
+        </createTable>
+    </changeSet>
+
+    <!-- ============ BILLING SETTINGS ============ -->
+    <changeSet id="billing-002-settings" author="microlinks">
+        <createTable tableName="billing_settings">
+            <column name="id" type="INT">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="delai_desactivation_jours" type="INT" defaultValueNumeric="15">
+                <constraints nullable="false"/>
+            </column>
+            <column name="auto_desactivation_active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="jour_generation" type="INT" defaultValueNumeric="1">
+                <constraints nullable="false"/>
+            </column>
+            <column name="delai_paiement_jours" type="INT" defaultValueNumeric="30">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="NOW()"/>
+            <column name="updated_by" type="VARCHAR(100)"/>
+        </createTable>
+    </changeSet>
+
+    <!-- ============ INSTITUTION BILLING CONFIG ============ -->
+    <changeSet id="billing-003-institution-billing" author="microlinks">
+        <createTable tableName="institution_billing">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="institution_id" type="UUID">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="institution_nom" type="VARCHAR(200)"/>
+            <column name="institution_email" type="VARCHAR(200)"/>
+            <column name="mode_paiement" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tarif_id" type="UUID"/>
+            <column name="actif" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <!-- ============ OPERATION USAGE ============ -->
+    <changeSet id="billing-004-operation-usage" author="microlinks">
+        <createTable tableName="operation_usage">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="institution_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="periode" type="VARCHAR(7)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="nombre_operations" type="BIGINT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addUniqueConstraint tableName="operation_usage"
+                             columnNames="institution_id, periode"
+                             constraintName="uq_usage_inst_periode"/>
+    </changeSet>
+
+    <!-- ============ FACTURES ============ -->
+    <changeSet id="billing-005-factures" author="microlinks">
+        <createTable tableName="factures">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="numero" type="VARCHAR(40)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="institution_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="institution_nom" type="VARCHAR(200)"/>
+            <column name="institution_email" type="VARCHAR(200)"/>
+            <column name="periode" type="VARCHAR(7)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="periode_debut" type="DATE"/>
+            <column name="periode_fin" type="DATE"/>
+            <column name="mode_paiement" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="nombre_operations" type="BIGINT"/>
+            <column name="montant_unitaire" type="DECIMAL(18,2)"/>
+            <column name="montant_total" type="DECIMAL(18,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="montant_paye" type="DECIMAL(18,2)" defaultValueNumeric="0"/>
+            <column name="devise" type="VARCHAR(3)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="statut" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="date_emission" type="DATE"/>
+            <column name="date_echeance" type="DATE"/>
+            <column name="date_limite_desactivation" type="DATE"/>
+            <column name="date_paiement" type="DATE"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createIndex tableName="factures" indexName="idx_factures_institution">
+            <column name="institution_id"/>
+        </createIndex>
+        <createIndex tableName="factures" indexName="idx_factures_statut">
+            <column name="statut"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- ============ PAIEMENTS ============ -->
+    <changeSet id="billing-006-paiements" author="microlinks">
+        <createTable tableName="paiements">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="facture_id" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_paiement_facture" references="factures(id)"/>
+            </column>
+            <column name="montant" type="DECIMAL(18,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="date_paiement" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="moyen_paiement" type="VARCHAR(50)"/>
+            <column name="reference" type="VARCHAR(100)"/>
+            <column name="commentaire" type="TEXT"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(100)"/>
+        </createTable>
+    </changeSet>
+
+</databaseChangeLog>

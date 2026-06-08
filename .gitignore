@@ -1,0 +1,6 @@
+# Build artifacts
+**/target/
+frontend/dist/
+# Local analysis artifacts
+CODEBASE_ANALYSIS.*
+.abacus.donotdelete

@@ -9,6 +9,7 @@ volumes:
   postgres-operation-data:
   postgres-rapport-data:
   postgres-notification-data:
+  postgres-billing-data:
   keycloak-data:
   redis-data:
   rabbitmq-data:
@@ -87,6 +88,23 @@ services:
       timeout: 5s
       retries: 5
 
+  postgres-billing:
+    image: postgres:16-alpine
+    container_name: ml-postgres-billing
+    environment:
+      POSTGRES_DB: billing_db
+      POSTGRES_USER: ${POSTGRES_USER:-microlinks}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-MicroLinks@2024}
+    volumes:
+      - postgres-billing-data:/var/lib/postgresql/data
+    networks:
+      - microlinks-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-microlinks} -d billing_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   redis:
     image: redis:7-alpine
     container_name: ml-redis
@@ -160,6 +178,7 @@ services:
       OPERATION_SERVICE_URL: http://operation-service:8083
       RAPPORT_SERVICE_URL: http://rapport-service:8084
       NOTIFICATION_SERVICE_URL: http://notification-service:8085
+      BILLING_SERVICE_URL: http://billing-service:8086
     ports:
       - "8080:8080"
     networks:
@@ -291,6 +310,40 @@ services:
       start_period: 60s
     depends_on:
       postgres-notification:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+
+  billing-service:
+    build:
+      context: ./backend/billing-service
+      dockerfile: Dockerfile
+    container_name: ml-billing-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-billing:5432/billing_db
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-microlinks}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-MicroLinks@2024}
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:-microlinks}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-RabbitMQ@2024}
+      KEYCLOAK_URL: ${KEYCLOAK_URL:-http://keycloak:8080}
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM:-microlinks}
+      INSTITUTION_SERVICE_URL: http://institution-service:8082
+      MICROLINKS_SERVICE_ACCOUNT_CLIENT_ID: ${BILLING_SA_CLIENT_ID:-billing-service}
+      MICROLINKS_SERVICE_ACCOUNT_CLIENT_SECRET: ${BILLING_SA_CLIENT_SECRET:-}
+    networks:
+      - microlinks-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:8086/actuator/health | grep -q UP || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    depends_on:
+      postgres-billing:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy

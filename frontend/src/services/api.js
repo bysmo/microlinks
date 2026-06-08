@@ -78,6 +78,39 @@ export const operationApi = {
   getStats: () => api.get('/api/v1/operations/stats'),
 };
 
+// ======================== FACTURATION / BILLING ========================
+
+export const tarifApi = {
+  findAll: () => api.get('/api/v1/tarifs'),
+  findById: (id) => api.get(`/api/v1/tarifs/${id}`),
+  create: (data) => api.post('/api/v1/tarifs', data),
+  update: (id, data) => api.put(`/api/v1/tarifs/${id}`, data),
+  remove: (id) => api.delete(`/api/v1/tarifs/${id}`),
+};
+
+export const billingSettingsApi = {
+  get: () => api.get('/api/v1/billing-settings'),
+  update: (data) => api.put('/api/v1/billing-settings', data),
+};
+
+export const institutionBillingApi = {
+  findAll: () => api.get('/api/v1/institution-billing'),
+  findByInstitution: (institutionId) => api.get(`/api/v1/institution-billing/${institutionId}`),
+  upsert: (data) => api.put('/api/v1/institution-billing', data),
+};
+
+export const factureApi = {
+  findAll: () => api.get('/api/v1/factures'),
+  mesFactures: () => api.get('/api/v1/factures/mes-factures'),
+  byInstitution: (institutionId) => api.get(`/api/v1/factures/institution/${institutionId}`),
+  findById: (id) => api.get(`/api/v1/factures/${id}`),
+  getPaiements: (id) => api.get(`/api/v1/factures/${id}/paiements`),
+  generer: (periode) => api.post('/api/v1/factures/generer', null, { params: periode ? { periode } : {} }),
+  payer: (id, data) => api.post(`/api/v1/factures/${id}/paiement`, data),
+  annuler: (id) => api.post(`/api/v1/factures/${id}/annuler`),
+  traiterRetards: () => api.post('/api/v1/factures/traiter-retards'),
+};
+
 // ======================== RAPPORTS / EXPORTS ========================
 
 export const rapportApi = {

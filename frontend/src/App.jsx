@@ -6,6 +6,8 @@ import Layout from './components/layout/Layout';
 import Dashboard from './pages/Dashboard/Dashboard';
 import OperationsListPage from './pages/Operations/OperationsListPage';
 import InstitutionsPage from './pages/Institutions/InstitutionsPage';
+import BillingAdminPage from './pages/Billing/BillingAdminPage';
+import MesFacturesPage from './pages/Billing/MesFacturesPage';
 import { AlertCircle } from 'lucide-react';
 
 function MockPage({ title }) {
@@ -82,6 +84,8 @@ function AppContent() {
         <Route path="operations" element={<OperationsListPage />} />
         <Route path="operations/nouvelle" element={<MockPage title="Nouvelle Opération" />} />
         <Route path="institutions" element={<InstitutionsPage />} />
+        <Route path="facturation" element={<BillingAdminPage />} />
+        <Route path="mes-factures" element={<MesFacturesPage />} />
         <Route path="clients" element={<MockPage title="Comptes Clients" />} />
         <Route path="rapports" element={<MockPage title="Rapports & Exports" />} />
         <Route path="administration" element={<MockPage title="Administration" />} />

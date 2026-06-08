@@ -296,18 +296,28 @@
 
   .modal-header {
     @apply flex items-center justify-between p-5;
-    background-color: #0B192C !important;
+    background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%) !important;
     color: #ffffff !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
   }
 
+  .modal-header h2,
   .modal-header h3 {
     @apply text-white font-bold text-lg;
     color: #ffffff !important;
+    margin: 0 !important;
   }
 
-  .modal-header button {
-    @apply text-slate-400 hover:text-white transition-colors;
+  .modal-header button,
+  .modal-header .btn-ghost {
+    @apply flex items-center justify-center rounded-lg p-1.5 transition-colors;
+    color: rgba(255, 255, 255, 0.85) !important;
+  }
+
+  .modal-header button:hover,
+  .modal-header .btn-ghost:hover {
+    color: #ffffff !important;
+    background-color: rgba(255, 255, 255, 0.15) !important;
   }
 
   .modal-body {

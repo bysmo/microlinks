@@ -20,6 +20,14 @@ const STATUS_CONFIGS = {
   INACTIF: { label: 'Inactif', className: 'badge-annule' },
   SUSPENDU: { label: 'Suspendu', className: 'badge-rejete' },
 
+  // Factures
+  EMISE: { label: 'Émise', className: 'badge-soumis' },
+  PAYEE: { label: 'Payée ✓', className: 'badge-comptabilise' },
+  EN_RETARD: { label: 'En retard', className: 'badge-rejete' },
+  ANNULEE: { label: 'Annulée', className: 'badge-annule' },
+  PAR_OPERATION: { label: 'Par opération', className: 'badge-virement' },
+  FORFAIT: { label: 'Forfait', className: 'badge-cheque' },
+
   // Types opérations
   VIREMENT: { label: '⇄ Virement', className: 'badge-virement' },
   CHEQUE: { label: '⎗ Chèque', className: 'badge-cheque' },

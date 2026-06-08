@@ -44,6 +44,7 @@ spring:
 microlinks:
   rabbitmq:
     exchange: microlinks.operations.exchange
+    billing-exchange: microlinks.billing.exchange
   mail:
     from: noreply@microlinks.com
     from-name: MicroLinks Platform

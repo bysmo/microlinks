@@ -63,6 +63,16 @@ spring:
                 name: rapportCB
                 fallbackUri: forward:/fallback
 
+        - id: billing-service
+          uri: http://billing-service:8086
+          predicates:
+            - Path=/api/v1/factures/**, /api/v1/tarifs/**, /api/v1/billing-settings/**, /api/v1/institution-billing/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: billingCB
+                fallbackUri: forward:/fallback
+
         - id: notification-service-ws
           uri: ws://notification-service:8085
           predicates:
@@ -108,6 +118,12 @@ resilience4j:
         waitDurationInOpenState: 10s
         failureRateThreshold: 50
       operationCB:
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        waitDurationInOpenState: 10s
+        failureRateThreshold: 50
+      billingCB:
         slidingWindowSize: 10
         minimumNumberOfCalls: 5
         permittedNumberOfCallsInHalfOpenState: 3
