@@ -1,0 +1,26 @@
+server:
+  port: 8084
+
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${KEYCLOAK_URL:http://localhost:8443}/realms/${KEYCLOAK_REALM:microlinks}/protocol/openid-connect/certs
+
+services:
+  operation:
+    url: ${OPERATION_SERVICE_URL:http://localhost:8083}
+  institution:
+    url: ${INSTITUTION_SERVICE_URL:http://localhost:8082}
+
+springdoc:
+  api-docs:
+    path: /api-docs
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_SERVER_URL:http://localhost:8761/eureka/}
+  instance:
+    prefer-ip-address: true

@@ -1,0 +1,144 @@
+server:
+  port: 8080
+
+spring:
+  cloud:
+    loadbalancer:
+      enabled: true
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOriginPatterns:
+              - "http://localhost:[*]"
+              - "http://127.0.0.1:[*]"
+              - "http://frontend:[*]"
+              - "https://*.preview.abacusai.app"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - PATCH
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+            exposedHeaders:
+              - Content-Disposition
+            allowCredentials: true
+            maxAge: 3600
+
+      routes:
+        - id: institution-service
+          uri: lb://institution-service
+          predicates:
+            - Path=/api/v1/institutions/**, /api/v1/agences/**, /api/v1/comptes/**, /api/v1/zones-monetaires/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: institutionCB
+                fallbackUri: forward:/fallback
+
+        - id: operation-service
+          uri: lb://operation-service
+          predicates:
+            - Path=/api/v1/operations/**, /api/v1/clients/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: operationCB
+                fallbackUri: forward:/fallback
+
+        - id: rapport-service
+          uri: lb://rapport-service
+          predicates:
+            - Path=/api/v1/rapports/**, /api/v1/exports/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: rapportCB
+                fallbackUri: forward:/fallback
+
+        - id: billing-service
+          uri: lb://billing-service
+          predicates:
+            - Path=/api/v1/factures/**, /api/v1/tarifs/**, /api/v1/billing-settings/**, /api/v1/institution-billing/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: billingCB
+                fallbackUri: forward:/fallback
+
+        - id: notification-service-ws
+          uri: lb://notification-service
+          predicates:
+            - Path=/ws/**
+
+        - id: notification-service
+          uri: lb://notification-service
+          predicates:
+            - Path=/api/v1/notifications/**
+
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${KEYCLOAK_URL:http://localhost:8443}/realms/${KEYCLOAK_REALM:microlinks}/protocol/openid-connect/certs
+
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:Redis@2024}
+      connect-timeout: 2000
+      timeout: 2000
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_SERVER_URL:http://localhost:8761/eureka/}
+  instance:
+    prefer-ip-address: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+  health:
+    redis:
+      enabled: false
+    defaults:
+      enabled: true
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      institutionCB:
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        waitDurationInOpenState: 10s
+        failureRateThreshold: 50
+      operationCB:
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        waitDurationInOpenState: 10s
+        failureRateThreshold: 50
+      billingCB:
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        waitDurationInOpenState: 10s
+        failureRateThreshold: 50
+
+logging:
+  level:
+    org.springframework.cloud.gateway: INFO
+    org.springframework.security: INFO
