@@ -3,7 +3,10 @@
 @tailwind utilities;
 
 @layer base {
-  *, *::before, *::after {
+
+  *,
+  *::before,
+  *::after {
     box-sizing: border-box;
   }
 
@@ -30,12 +33,15 @@
     width: 6px;
     height: 6px;
   }
+
   ::-webkit-scrollbar-track {
     @apply bg-slate-100;
   }
+
   ::-webkit-scrollbar-thumb {
     @apply bg-slate-300 rounded-full;
   }
+
   ::-webkit-scrollbar-thumb:hover {
     @apply bg-slate-400;
   }
@@ -58,8 +64,7 @@
      SIDEBAR
   ======================== */
   .sidebar {
-    @apply fixed left-0 top-0 h-full z-50
-           transition-all duration-300 ease-in-out flex flex-col;
+    @apply fixed left-0 top-0 h-full z-50 transition-all duration-300 ease-in-out flex flex-col;
     background-color: #0B192C !important;
     border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
   }
@@ -73,8 +78,7 @@
   }
 
   .sidebar-item {
-    @apply flex items-center gap-3 px-4 py-3 rounded-lg mx-2 cursor-pointer
-           transition-all duration-200 relative;
+    @apply flex items-center gap-3 px-4 py-3 rounded-lg mx-2 cursor-pointer transition-all duration-200 relative;
     color: #cbd5e1 !important;
   }
 
@@ -114,17 +118,20 @@
     @apply w-full text-sm;
   }
 
+  #main-content .data-table thead,
   .data-table thead {
     background-color: #0B192C !important;
-    border-bottom: 2px solid #cbd5e1 !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
   }
 
+  #main-content .data-table th,
   .data-table th {
-    @apply px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider
-           cursor-pointer select-none;
+    background-color: #0B192C !important;
+    @apply px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider cursor-pointer select-none;
     color: #F3C623 !important;
   }
 
+  #main-content .data-table th:hover,
   .data-table th:hover {
     color: #ffffff !important;
   }
@@ -150,22 +157,47 @@
     @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border;
   }
 
-  .badge-brouillon { @apply bg-slate-100 text-slate-600 border-slate-200; }
-  .badge-soumis { @apply bg-blue-50 text-blue-700 border-blue-200; }
-  .badge-accepte { @apply bg-emerald-50 text-emerald-700 border-emerald-200; }
-  .badge-rejete { @apply bg-red-50 text-red-700 border-red-200; }
-  .badge-comptabilise { @apply bg-green-50 text-green-700 border-green-200; }
-  .badge-annule { @apply bg-slate-50 text-slate-400 border-slate-200; }
-  .badge-virement { @apply bg-[#0b192c]/5 text-[#0b192c] border-[#0b192c]/20; }
-  .badge-cheque { @apply bg-purple-50 text-purple-700 border-purple-200; }
-  .badge-prelevement { @apply bg-orange-50 text-orange-700 border-orange-200; }
+  .badge-brouillon {
+    @apply bg-slate-100 text-slate-600 border-slate-200;
+  }
+
+  .badge-soumis {
+    @apply bg-blue-50 text-blue-700 border-blue-200;
+  }
+
+  .badge-accepte {
+    @apply bg-emerald-50 text-emerald-700 border-emerald-200;
+  }
+
+  .badge-rejete {
+    @apply bg-red-50 text-red-700 border-red-200;
+  }
+
+  .badge-comptabilise {
+    @apply bg-green-50 text-green-700 border-green-200;
+  }
+
+  .badge-annule {
+    @apply bg-slate-50 text-slate-400 border-slate-200;
+  }
+
+  .badge-virement {
+    @apply bg-[#0b192c]/5 text-[#0b192c] border-[#0b192c]/20;
+  }
+
+  .badge-cheque {
+    @apply bg-purple-50 text-purple-700 border-purple-200;
+  }
+
+  .badge-prelevement {
+    @apply bg-orange-50 text-orange-700 border-orange-200;
+  }
 
   /* ========================
      BUTTONS
   ======================== */
   .btn {
-    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold
-           transition-all duration-200 cursor-pointer border text-sm;
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all duration-200 cursor-pointer border text-sm;
   }
 
   .btn-primary {
@@ -219,8 +251,7 @@
   }
 
   .btn-ghost {
-    @apply btn bg-transparent border-transparent text-slate-600
-           hover:bg-slate-100 hover:text-slate-900 active:scale-95;
+    @apply btn bg-transparent border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900 active:scale-95;
   }
 
   .btn-sm {
@@ -234,18 +265,21 @@
   /* ========================
      FORM INPUTS
   ======================== */
-  .input, .form-control {
+  .input,
+  .form-control {
     @apply w-full rounded-lg px-4 py-2.5 transition-all duration-200 text-sm;
     background-color: #ffffff !important;
     border: 1px solid #cbd5e1 !important;
     color: #0f172a !important;
   }
 
-  .input:hover, .form-control:hover {
+  .input:hover,
+  .form-control:hover {
     border-color: #94a3b8 !important;
   }
 
-  .input:focus, .form-control:focus {
+  .input:focus,
+  .form-control:focus {
     outline: none !important;
     border-color: #0B192C !important;
     box-shadow: 0 0 0 2px rgba(11, 25, 44, 0.15) !important;
@@ -255,7 +289,8 @@
     @apply cursor-pointer appearance-none;
   }
 
-  .label, label {
+  .label,
+  label {
     @apply block text-sm font-semibold text-slate-700 mb-1.5;
   }
 
@@ -289,8 +324,7 @@
   }
 
   .modal-content {
-    @apply bg-white border border-slate-200 rounded-2xl shadow-2xl
-           max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col;
+    @apply bg-white border border-slate-200 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col;
     animation: slideUp 0.3s ease-out;
   }
 
@@ -374,9 +408,7 @@
   }
 
   .pagination-btn {
-    @apply w-8 h-8 rounded-lg flex items-center justify-center text-sm
-           text-slate-600 hover:bg-slate-100 hover:text-slate-900
-           transition-colors duration-150 cursor-pointer;
+    @apply w-8 h-8 rounded-lg flex items-center justify-center text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors duration-150 cursor-pointer;
   }
 
   .pagination-btn.active {
@@ -389,6 +421,43 @@
     @apply opacity-30 cursor-not-allowed hover:bg-transparent hover:text-slate-600;
   }
 
+  #main-content .data-table-footer {
+    background-color: #0B192C !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: #F3C623 !important;
+  }
+
+  #main-content .data-table-footer span,
+  #main-content .data-table-footer span.text-white,
+  #main-content .data-table-footer span.font-bold {
+    color: #ffffff !important;
+  }
+
+  #main-content .data-table-footer .pagination-btn {
+    color: #F3C623 !important;
+    background-color: transparent !important;
+    border: 1px solid transparent !important;
+  }
+
+  #main-content .data-table-footer .pagination-btn:hover:not(:disabled) {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    color: #ffffff !important;
+  }
+
+  #main-content .data-table-footer .pagination-btn.active {
+    background-color: #F3C623 !important;
+    color: #0B192C !important;
+    border-color: #F3C623 !important;
+    opacity: 1 !important;
+  }
+
+  #main-content .data-table-footer .pagination-btn:disabled {
+    color: #F3C623 !important;
+    opacity: 0.35 !important;
+    background-color: transparent !important;
+    cursor: not-allowed !important;
+  }
+
   /* ========================
      NOTIFICATION TOAST
   ======================== */
@@ -397,8 +466,7 @@
   }
 
   .notification-badge {
-    @apply absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white
-           text-xs rounded-full flex items-center justify-center;
+    @apply absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center;
   }
 
   /* ========================
@@ -422,6 +490,7 @@
     opacity: 0;
     transform: translateY(-8px) scale(0.98);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -433,6 +502,7 @@
     opacity: 1;
     transform: translateY(0) scale(1);
   }
+
   to {
     opacity: 0;
     transform: translateY(-8px) scale(0.98);
@@ -460,6 +530,7 @@
     scrollbar-width: none;
     -ms-overflow-style: none;
   }
+
   .scrollbar-hidden::-webkit-scrollbar {
     display: none;
   }
@@ -574,4 +645,3 @@
 #main-content .btn-danger * {
   color: #ffffff !important;
 }
-

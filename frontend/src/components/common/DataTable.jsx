@@ -87,7 +87,7 @@ export default function DataTable({
       {/* Table */}
       <div className="overflow-auto">
         <table className="data-table" role="table" id="data-table">
-          <thead className={stickyHeader ? 'sticky top-0 z-10 bg-dark-900/95 backdrop-blur-sm' : ''}>
+          <thead className={stickyHeader ? 'sticky top-0 z-10 bg-[#0B192C] backdrop-blur-sm' : ''}>
             {table.getHeaderGroups().map(headerGroup => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map(header => (
@@ -153,10 +153,10 @@ export default function DataTable({
       </div>
 
       {/* Footer: pagination */}
-      <div className="flex flex-wrap items-center justify-between gap-4 px-4 py-3 border-t border-slate-200 bg-slate-50/30">
-        <div className="text-xs text-slate-500 font-medium">
-          Page <span className="font-semibold text-slate-800">{totalPages > 0 ? page + 1 : 0}</span> sur{' '}
-          <span className="font-semibold text-slate-800">{totalPages || 1}</span>
+      <div className="data-table-footer flex flex-wrap items-center justify-between gap-4 px-4 py-3 border-t border-white/10 bg-[#0B192C]">
+        <div className="text-xs text-[#F3C623] font-semibold">
+          Page <span className="font-bold text-white">{totalPages > 0 ? page + 1 : 0}</span> sur{' '}
+          <span className="font-bold text-white">{totalPages || 1}</span>
         </div>
 
         <div className="pagination" role="navigation" aria-label="Pagination">
