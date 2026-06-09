@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Building2, Search, Plus, Edit2, CheckCircle2, 
   XCircle, AlertTriangle, RefreshCw, X, HelpCircle, 
@@ -7,6 +7,7 @@ import {
 import { institutionApi, zoneMonetaireApi } from '../../services/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
+import DataTable from '../../components/common/DataTable';
 
 const TYPE_LABELS = {
   BANQUE: 'Banque',
@@ -37,6 +38,7 @@ export default function InstitutionsPage() {
   const [typeFilter, setTypeFilter] = useState('');
   const [statutFilter, setStatutFilter] = useState('');
   const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
 
@@ -66,14 +68,165 @@ export default function InstitutionsPage() {
 
   const [formErrors, setFormErrors] = useState({});
 
+  // Compteur de retry pour les zones monétaires
+  const [zonesRetryCount, setZonesRetryCount] = useState(0);
+  const zonesRetryRef = React.useRef(null);
+
+  const columns = useMemo(() => [
+    {
+      header: 'Code / Sigle',
+      accessorKey: 'code',
+      cell: ({ row }) => (
+        <div>
+          <div className="font-semibold text-slate-800">{row.original.code}</div>
+          <div className="text-xs text-slate-400">{row.original.sigle || '—'}</div>
+        </div>
+      ),
+      size: 110,
+    },
+    {
+      header: "Nom de l'Institution",
+      accessorKey: 'nom',
+      cell: ({ row }) => (
+        <button 
+          onClick={() => setViewDetailInst(row.original)} 
+          className="font-medium text-[#0B192C] hover:text-primary-500 hover:underline transition-colors text-left font-semibold"
+        >
+          {row.original.nom}
+        </button>
+      ),
+      size: 240,
+    },
+    {
+      header: 'Type',
+      accessorKey: 'typeInstitution',
+      cell: ({ getValue }) => (
+        <span className="text-xs text-slate-600 font-medium">{TYPE_LABELS[getValue()]}</span>
+      ),
+      size: 130,
+    },
+    {
+      header: 'Zone / Pays',
+      accessorKey: 'pays',
+      cell: ({ row }) => (
+        <div>
+          <div className="text-xs text-slate-800 font-semibold">{row.original.zoneMonetaire?.code || '—'}</div>
+          <div className="text-[10px] text-slate-400 font-medium">{row.original.pays}</div>
+        </div>
+      ),
+      size: 110,
+    },
+    {
+      header: 'Réf Microlink / Domiciliation',
+      accessorKey: 'codeMicrolink',
+      cell: ({ row }) => {
+        const inst = row.original;
+        return inst.typeInstitution === 'BANQUE' ? (
+          <div className="text-[11px] text-slate-600">
+            <div>BIC: <span className="text-slate-800 font-mono font-semibold">{inst.codeBic || '—'}</span></div>
+            <div>CBR: <span className="text-slate-800 font-mono font-semibold">{inst.codeBanqueRegional || '—'}</span></div>
+          </div>
+        ) : (
+          <div className="text-[11px] text-slate-600">
+            <div className="font-mono text-[#0B192C] font-semibold">{inst.codeMicrolink || 'Généré à l\'activation'}</div>
+            <div className="text-[10px] text-slate-400 truncate max-w-40 font-medium" title={inst.banqueCorrespondanteNom}>
+              Dom: {inst.banqueCorrespondanteNom || 'Non configuré'}
+            </div>
+          </div>
+        );
+      },
+      size: 200,
+    },
+    {
+      header: 'Statut',
+      accessorKey: 'statut',
+      cell: ({ getValue }) => (
+        <span className={`badge ${STATUT_COLORS[getValue()]}`}>
+          {getValue() === 'ACTIF' ? 'Validée / Active' : getValue() === 'INACTIF' ? 'Attente Validation' : 'Suspendue'}
+        </span>
+      ),
+      size: 140,
+    },
+    {
+      header: 'Actions',
+      id: 'actions',
+      cell: ({ row }) => {
+        const inst = row.original;
+        return (
+          <div className="flex items-center justify-end gap-2">
+            <button 
+              onClick={() => setViewDetailInst(inst)}
+              className="p-1 hover:bg-slate-100 text-slate-500 hover:text-slate-800 rounded transition-colors"
+              title="Consulter"
+            >
+              <Globe className="w-4 h-4" />
+            </button>
+
+            {isAdmin && (
+              <>
+                <button 
+                  onClick={() => openEditModal(inst)}
+                  className="p-1 hover:bg-slate-100 text-slate-500 hover:text-amber-500 rounded transition-colors"
+                  title="Modifier"
+                >
+                  <Edit2 className="w-4 h-4" />
+                </button>
+
+                {inst.statut === 'INACTIF' && (
+                  <button 
+                    onClick={() => handleStatusToggle(inst, 'ACTIF')}
+                    className="px-2 py-1 bg-green-50 text-green-600 border border-green-200 rounded hover:bg-green-100 transition-colors flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider"
+                    title="Valider et Activer l'institution"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    Valider
+                  </button>
+                )}
+
+                {inst.statut === 'ACTIF' && (
+                  <button 
+                    onClick={() => handleStatusToggle(inst, 'SUSPENDU')}
+                    className="p-1 hover:bg-slate-100 text-red-500 hover:text-red-600 rounded transition-colors"
+                    title="Suspendre"
+                  >
+                    <XCircle className="w-4 h-4" />
+                  </button>
+                )}
+
+                {inst.statut === 'SUSPENDU' && (
+                  <button 
+                    onClick={() => handleStatusToggle(inst, 'ACTIF')}
+                    className="p-1 hover:bg-slate-100 text-green-500 hover:text-green-600 rounded transition-colors"
+                    title="Réactiver"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+        );
+      },
+      size: 140,
+    }
+  ], [isAdmin]);
+
+
   useEffect(() => {
-    fetchMetadata();
+    fetchZones();
     fetchStats();
   }, []);
 
   useEffect(() => {
+    // Recharger les banques correspondantes quand les institutions sont disponibles
+    if (zones.length > 0) {
+      fetchCorrespondantBanks();
+    }
+  }, [zones]);
+
+  useEffect(() => {
     fetchInstitutions();
-  }, [page, typeFilter, statutFilter]);
+  }, [page, typeFilter, statutFilter, pageSize]);
 
   // Construit un message d'erreur lisible à partir d'une erreur Axios.
   const describeError = (e, fallback) => {
@@ -103,24 +256,52 @@ export default function InstitutionsPage() {
     }
   };
 
-  const fetchMetadata = async () => {
-    // On charge zones et banques indépendamment : l'échec de l'un ne doit pas
-    // empêcher l'autre de se charger.
+  // Charge les zones monétaires avec retry automatique (backoff exponentiel)
+  // pour gérer le démarrage progressif des services Docker
+  const fetchZones = async (attempt = 0) => {
+    const MAX_ATTEMPTS = 6;
     try {
       const zonesRes = await zoneMonetaireApi.findAll();
-      setZones(zonesRes.data || []);
+      const data = zonesRes.data || [];
+      setZones(data);
+      setZonesRetryCount(0);
+      if (zonesRetryRef.current) {
+        clearTimeout(zonesRetryRef.current);
+        zonesRetryRef.current = null;
+      }
+      if (data.length === 0 && attempt < MAX_ATTEMPTS) {
+        // DB prête mais pas encore migrée : retry
+        const delay = Math.min(2000 * Math.pow(1.5, attempt), 30000);
+        console.warn(`Zones monétaires vides, retry dans ${delay}ms (tentative ${attempt + 1}/${MAX_ATTEMPTS})`);
+        zonesRetryRef.current = setTimeout(() => fetchZones(attempt + 1), delay);
+      }
     } catch (e) {
-      console.error('Erreur chargement zones monétaires:', describeError(e, 'Zones indisponibles'), e);
-      toast.error('Erreur lors du chargement des référentiels (zones/banques)', {
-        id: 'metadata-error', // évite les toasts dupliqués
-      });
+      const isNetworkError = !e?.response;
+      if (attempt < MAX_ATTEMPTS) {
+        // Retry silencieux pendant le démarrage des services
+        const delay = Math.min(3000 * Math.pow(1.5, attempt), 30000);
+        setZonesRetryCount(attempt + 1);
+        console.warn(`Zones indisponibles (tentative ${attempt + 1}/${MAX_ATTEMPTS}), retry dans ${delay}ms :`, e?.message);
+        zonesRetryRef.current = setTimeout(() => fetchZones(attempt + 1), delay);
+      } else {
+        // Toutes les tentatives épuisées : afficher l'erreur
+        console.error('Zones monétaires inaccessibles après toutes les tentatives:', e);
+        if (isNetworkError) {
+          toast.error('Impossible de joindre le serveur. Vérifiez que les services sont démarrés.', { id: 'zones-error', duration: 8000 });
+        } else {
+          toast.error('Erreur lors du chargement des zones monétaires', { id: 'zones-error' });
+        }
+      }
     }
+  };
 
+  // Charge les banques correspondantes (nécessite un token JWT valide)
+  const fetchCorrespondantBanks = async () => {
     try {
       const banksRes = await institutionApi.findAll({ type: 'BANQUE', size: 100 });
       setCorrespondantBanks(banksRes.data?.content || []);
     } catch (e) {
-      console.error('Erreur chargement banques correspondantes:', describeError(e, 'Banques indisponibles'), e);
+      console.warn('Banques correspondantes indisponibles:', e?.message);
     }
   };
 
@@ -133,7 +314,7 @@ export default function InstitutionsPage() {
         type: typeFilter || undefined,
         statut: statutFilter || undefined,
         page,
-        size: 8,
+        size: pageSize,
       });
       setInstitutions(res.data?.content || []);
       setTotalPages(res.data?.totalPages || 0);
@@ -152,7 +333,7 @@ export default function InstitutionsPage() {
   };
 
   const handleRetry = () => {
-    fetchMetadata();
+    fetchZones();
     fetchStats();
     fetchInstitutions();
   };
@@ -407,169 +588,17 @@ export default function InstitutionsPage() {
       )}
 
       {/* List Table */}
-      <div className="data-table-container">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Code / Sigle</th>
-              <th>Nom de l'Institution</th>
-              <th>Type</th>
-              <th>Zone / Pays</th>
-              <th>Réf Microlink / Domiciliation</th>
-              <th>Statut</th>
-              <th className="text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              [...Array(5)].map((_, i) => (
-                <tr key={i} className="animate-pulse">
-                  {[...Array(7)].map((_, c) => (
-                    <td key={c}><div className="h-4 bg-dark-700 rounded w-3/4"></div></td>
-                  ))}
-                </tr>
-              ))
-            ) : institutions.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="text-center py-10 text-dark-400">
-                  <Building2 className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                  Aucune institution correspondante trouvée.
-                </td>
-              </tr>
-            ) : (
-              institutions.map((inst) => (
-                <tr key={inst.id} className="hover:bg-white/5">
-                  <td>
-                    <div className="font-semibold text-white">{inst.code}</div>
-                    <div className="text-xs text-dark-400">{inst.sigle || '—'}</div>
-                  </td>
-                  <td>
-                    <button 
-                      onClick={() => setViewDetailInst(inst)} 
-                      className="font-medium text-white hover:text-primary-400 transition-colors text-left"
-                    >
-                      {inst.nom}
-                    </button>
-                  </td>
-                  <td>
-                    <span className="text-xs text-dark-200">{TYPE_LABELS[inst.typeInstitution]}</span>
-                  </td>
-                  <td>
-                    <div className="text-xs text-white">{inst.zoneMonetaire?.code || '—'}</div>
-                    <div className="text-[10px] text-dark-400">{inst.pays}</div>
-                  </td>
-                  <td>
-                    {inst.typeInstitution === 'BANQUE' ? (
-                      <div className="text-[11px] text-dark-300">
-                        <div>BIC: <span className="text-white font-mono">{inst.codeBic || '—'}</span></div>
-                        <div>CBR: <span className="text-white font-mono">{inst.codeBanqueRegional || '—'}</span></div>
-                      </div>
-                    ) : (
-                      <div className="text-[11px] text-dark-300">
-                        <div className="font-mono text-primary-400 font-semibold">{inst.codeMicrolink || 'Généré à l\'activation'}</div>
-                        <div className="text-[10px] text-dark-400 truncate max-w-40" title={inst.banqueCorrespondanteNom}>
-                          Dom: {inst.banqueCorrespondanteNom || 'Non configuré'}
-                        </div>
-                      </div>
-                    )}
-                  </td>
-                  <td>
-                    <span className={`badge ${STATUT_COLORS[inst.statut]}`}>
-                      {inst.statut === 'ACTIF' ? 'Validée / Active' : inst.statut === 'INACTIF' ? 'Attente Validation' : 'Suspendue'}
-                    </span>
-                  </td>
-                  <td className="text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button 
-                        onClick={() => setViewDetailInst(inst)}
-                        className="p-1 hover:bg-white/5 text-dark-300 hover:text-white rounded"
-                        title="Consulter"
-                      >
-                        <Globe className="w-4 h-4" />
-                      </button>
-
-                      {isAdmin && (
-                        <>
-                          <button 
-                            onClick={() => openEditModal(inst)}
-                            className="p-1 hover:bg-white/5 text-dark-300 hover:text-primary-400 rounded"
-                            title="Modifier"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-
-                          {inst.statut === 'INACTIF' && (
-                            <button 
-                              onClick={() => handleStatusToggle(inst, 'ACTIF')}
-                              className="p-1.5 bg-green-500/10 text-green-400 border border-green-500/30 rounded hover:bg-green-500/20 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider"
-                              title="Valider et Activer l'institution"
-                            >
-                              <CheckCircle2 className="w-3.5 h-3.5" />
-                              Valider
-                            </button>
-                          )}
-
-                          {inst.statut === 'ACTIF' && (
-                            <button 
-                              onClick={() => handleStatusToggle(inst, 'SUSPENDU')}
-                              className="p-1 hover:bg-white/5 text-red-400 hover:text-red-300 rounded"
-                              title="Suspendre"
-                            >
-                              <XCircle className="w-4 h-4" />
-                            </button>
-                          )}
-
-                          {inst.statut === 'SUSPENDU' && (
-                            <button 
-                              onClick={() => handleStatusToggle(inst, 'ACTIF')}
-                              className="p-1 hover:bg-white/5 text-green-400 hover:text-green-300 rounded"
-                              title="Réactiver"
-                            >
-                              <CheckCircle2 className="w-4 h-4" />
-                            </button>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between p-4 border-t border-white/5 text-xs text-dark-400">
-            <span>Affichage de {institutions.length} sur {totalElements} institutions</span>
-            <div className="pagination">
-              <button 
-                onClick={() => setPage(p => Math.max(0, p - 1))} 
-                disabled={page === 0}
-                className="pagination-btn"
-              >
-                Précédent
-              </button>
-              {[...Array(totalPages)].map((_, i) => (
-                <button 
-                  key={i} 
-                  onClick={() => setPage(i)}
-                  className={`pagination-btn ${page === i ? 'active' : ''}`}
-                >
-                  {i + 1}
-                </button>
-              ))}
-              <button 
-                onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} 
-                disabled={page === totalPages - 1}
-                className="pagination-btn"
-              >
-                Suivant
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+      <DataTable
+        data={institutions}
+        columns={columns}
+        totalElements={totalElements}
+        page={page}
+        pageSize={pageSize}
+        onPageChange={setPage}
+        onPageSizeChange={(s) => { setPageSize(s); setPage(0); }}
+        isLoading={loading}
+        emptyMessage="Aucune institution correspondante trouvée."
+      />
 
       {/* Creation / Edition Modal */}
       {showModal && (
@@ -660,19 +689,39 @@ export default function InstitutionsPage() {
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="zoneMonetaireId">Zone Monétaire</label>
+                  <label htmlFor="zoneMonetaireId">
+                    Zone Monétaire
+                    {zonesRetryCount > 0 && zones.length === 0 && (
+                      <span className="ml-2 text-xs text-yellow-500 font-normal">
+                        ⏳ Chargement... (tentative {zonesRetryCount})
+                      </span>
+                    )}
+                  </label>
                   <select 
                     id="zoneMonetaireId"
                     value={formData.zoneMonetaireId}
                     onChange={(e) => setFormData(prev => ({ ...prev, zoneMonetaireId: e.target.value }))}
                     className={`form-control ${formErrors.zoneMonetaireId ? 'border-red-500/50' : ''}`}
+                    disabled={zones.length === 0 && zonesRetryCount > 0}
                   >
-                    <option value="">Sélectionner une zone</option>
-                    {zones.map(z => (
-                      <option key={z.id} value={z.id}>{z.libelle} ({z.code} - {z.devise})</option>
-                    ))}
+                    {zones.length === 0 && zonesRetryCount > 0 ? (
+                      <option value="">⏳ Chargement des zones en cours...</option>
+                    ) : (
+                      <>
+                        <option value="">Sélectionner une zone</option>
+                        {zones.map(z => (
+                          <option key={z.id} value={z.id}>{z.libelle} ({z.code} - {z.devise})</option>
+                        ))}
+                      </>
+                    )}
                   </select>
                   {formErrors.zoneMonetaireId && <p className="text-red-500 text-xs mt-1">{formErrors.zoneMonetaireId}</p>}
+                  {zones.length === 0 && zonesRetryCount === 0 && (
+                    <p className="text-yellow-600 text-xs mt-1">
+                      ⚠️ Aucune zone disponible. 
+                      <button type="button" className="underline ml-1" onClick={() => fetchZones()}>Recharger</button>
+                    </p>
+                  )}
                 </div>
 
                 <div className="form-group">
