@@ -25,13 +25,13 @@ public interface InstitutionRepository extends JpaRepository<Institution, UUID> 
 
     @Query("""
         SELECT i FROM Institution i
-        WHERE (:search IS NULL OR LOWER(i.nom) LIKE LOWER(CONCAT('%', :search, '%'))
-               OR LOWER(i.code) LIKE LOWER(CONCAT('%', :search, '%'))
-               OR LOWER(i.sigle) LIKE LOWER(CONCAT('%', :search, '%')))
-        AND (:type IS NULL OR i.typeInstitution = :type)
-        AND (:statut IS NULL OR i.statut = :statut)
-        AND (:zoneId IS NULL OR i.zoneMonetaire.id = :zoneId)
-        AND (:pays IS NULL OR i.pays = :pays)
+        WHERE (cast(:search as string) IS NULL OR LOWER(i.nom) LIKE LOWER(CONCAT('%', cast(:search as string), '%'))
+               OR LOWER(i.code) LIKE LOWER(CONCAT('%', cast(:search as string), '%'))
+               OR LOWER(i.sigle) LIKE LOWER(CONCAT('%', cast(:search as string), '%')))
+        AND (cast(:type as string) IS NULL OR i.typeInstitution = :type)
+        AND (cast(:statut as string) IS NULL OR i.statut = :statut)
+        AND (cast(:zoneId as uuid) IS NULL OR i.zoneMonetaire.id = :zoneId)
+        AND (cast(:pays as string) IS NULL OR i.pays = :pays)
     """)
     Page<Institution> findWithFilters(
             @Param("search") String search,

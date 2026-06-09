@@ -27,6 +27,8 @@ public class SecurityConfig {
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/actuator/health", "/api-docs/**", "/swagger-ui/**").permitAll()
+                // Données de référence : zones monétaires accessibles sans token
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/zones-monetaires", "/api/v1/zones-monetaires/**").permitAll()
                 .anyRequest().authenticated()
             )
             .oauth2ResourceServer(oauth2 -> oauth2

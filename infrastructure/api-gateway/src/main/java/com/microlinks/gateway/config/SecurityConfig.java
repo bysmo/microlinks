@@ -33,6 +33,11 @@ public class SecurityConfig {
                 .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .pathMatchers("/actuator/health", "/actuator/info", "/fallback").permitAll()
                 .pathMatchers("/ws/**").permitAll()
+                // Données de référence (non-sensibles) : accessibles sans token pour
+                // permettre le chargement initial des formulaires avant authentification.
+                .pathMatchers(HttpMethod.GET, "/api/v1/zones-monetaires", "/api/v1/zones-monetaires/**").permitAll()
+                // Statistiques agrégées (non personnelles) : dashboard public
+                .pathMatchers(HttpMethod.GET, "/api/v1/institutions/stats").permitAll()
                 .anyExchange().authenticated()
             )
             .oauth2ResourceServer(oauth2 -> oauth2

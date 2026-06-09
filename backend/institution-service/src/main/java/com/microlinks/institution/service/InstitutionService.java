@@ -26,6 +26,7 @@ public class InstitutionService {
 
     private final InstitutionRepository institutionRepository;
     private final ZoneMonetaireRepository zoneMonetaireRepository;
+    private final KeycloakProvisioningService keycloakProvisioningService;
 
     public PagedResponse<InstitutionDto> findAll(
             String search, TypeInstitution type, StatutEntite statut,
@@ -188,6 +189,12 @@ public class InstitutionService {
     @CacheEvict(value = "institutions", key = "#id")
     public void changerStatut(UUID id, StatutEntite nouveauStatut, String currentUser) {
         Institution institution = findInstitutionById(id);
+        
+        // Si le statut change vers ACTIF, provisionner les utilisateurs Keycloak
+        if (nouveauStatut == StatutEntite.ACTIF && institution.getStatut() != StatutEntite.ACTIF) {
+            keycloakProvisioningService.provisionUsersForInstitution(institution);
+        }
+
         institution.setStatut(nouveauStatut);
         institution.setUpdatedBy(currentUser);
         institutionRepository.save(institution);

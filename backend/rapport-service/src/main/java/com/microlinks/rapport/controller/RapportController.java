@@ -11,6 +11,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.reactive.function.client.WebClient;
 import java.time.LocalDate;
@@ -29,6 +30,9 @@ public class RapportController {
     private final MT940ExportService mt940Service;
     private final CAMT053ExportService camt053Service;
     private final WebClient.Builder webClientBuilder;
+
+    @Value("${services.operation.url:http://operation-service:8083}")
+    private String operationServiceUrl;
 
     @GetMapping("/export/excel")
     @Operation(summary = "Exporter les opérations en Excel (.xlsx)")
@@ -146,7 +150,7 @@ public class RapportController {
     private List<Map<String, Object>> fetchOperations(LocalDate dateDebut, LocalDate dateFin,
                                                         String institutionId, Jwt jwt) {
         try {
-            String url = "${services.operation.url:http://operation-service:8083}/api/v1/operations" +
+            String url = operationServiceUrl + "/api/v1/operations" +
                     "?dateDebut=" + dateDebut + "&dateFin=" + dateFin + "&size=10000";
             if (institutionId != null && !institutionId.isEmpty()) {
                 url += "&institutionEmettriceId=" + institutionId;

@@ -8,6 +8,7 @@ import OperationsListPage from './pages/Operations/OperationsListPage';
 import InstitutionsPage from './pages/Institutions/InstitutionsPage';
 import BillingAdminPage from './pages/Billing/BillingAdminPage';
 import MesFacturesPage from './pages/Billing/MesFacturesPage';
+import AdministrationPage from './pages/Administration/AdministrationPage';
 import { AlertCircle } from 'lucide-react';
 
 function MockPage({ title }) {
@@ -88,7 +89,7 @@ function AppContent() {
         <Route path="mes-factures" element={<MesFacturesPage />} />
         <Route path="clients" element={<MockPage title="Comptes Clients" />} />
         <Route path="rapports" element={<MockPage title="Rapports & Exports" />} />
-        <Route path="administration" element={<MockPage title="Administration" />} />
+        <Route path="administration" element={<AdministrationPage />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Route>
     </Routes>

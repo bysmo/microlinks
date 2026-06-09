@@ -1,50 +1,5 @@
-server:
-  port: 8085
-
 spring:
   application:
     name: notification-service
-
-  datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/notification_db}
-    username: ${SPRING_DATASOURCE_USERNAME:microlinks}
-    password: ${SPRING_DATASOURCE_PASSWORD:MicroLinks@2024}
-
-  jpa:
-    hibernate:
-      ddl-auto: update
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-
-  rabbitmq:
-    host: ${SPRING_RABBITMQ_HOST:localhost}
-    port: 5672
-    username: ${SPRING_RABBITMQ_USERNAME:microlinks}
-    password: ${SPRING_RABBITMQ_PASSWORD:RabbitMQ@2024}
-
-  mail:
-    host: ${SPRING_MAIL_HOST:smtp.gmail.com}
-    port: ${SPRING_MAIL_PORT:587}
-    username: ${SPRING_MAIL_USERNAME:}
-    password: ${SPRING_MAIL_PASSWORD:}
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
-
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: ${KEYCLOAK_URL:http://localhost:8443}/realms/${KEYCLOAK_REALM:microlinks}
-
-microlinks:
-  rabbitmq:
-    exchange: microlinks.operations.exchange
-    billing-exchange: microlinks.billing.exchange
-  mail:
-    from: noreply@microlinks.com
-    from-name: MicroLinks Platform
+  config:
+    import: "optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}"

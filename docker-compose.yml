@@ -154,22 +154,52 @@ services:
       - "8443:8080"
     networks:
       - microlinks-net
-    healthcheck:
-      test: ["CMD", "/bin/bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080; echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\n\\r\\n' >&3; cat <&3 | grep -q '\"status\":\"UP\"'"]
-      interval: 30s
-      timeout: 10s
-      retries: 10
-      start_period: 90s
+    # Pas de healthcheck : l'image ubi9-micro ne contient ni curl ni wget.
+    # Les services dépendants utilisent service_started + restart:on-failure.
 
-  # ============================================
-  # BACKEND MICROSERVICES
-  # ============================================
+  discovery-service:
+    build:
+      context: ./infrastructure/discovery-service
+      dockerfile: Dockerfile
+    container_name: ml-discovery-service
+    restart: on-failure
+    ports:
+      - "8761:8761"
+    networks:
+      - microlinks-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:8761/actuator/health | grep -q UP || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  config-service:
+    build:
+      context: ./infrastructure/config-service
+      dockerfile: Dockerfile
+    container_name: ml-config-service
+    restart: on-failure
+    environment:
+      SPRING_PROFILES_ACTIVE: native,docker
+    ports:
+      - "8888:8888"
+    networks:
+      - microlinks-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:8888/actuator/health | grep -q UP || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      discovery-service:
+        condition: service_healthy
 
   api-gateway:
     build:
-      context: ./backend/api-gateway
+      context: ./infrastructure/api-gateway
       dockerfile: Dockerfile
     container_name: ml-api-gateway
+    restart: on-failure
     environment:
       SPRING_PROFILES_ACTIVE: docker
       KEYCLOAK_URL: ${KEYCLOAK_URL:-http://keycloak:8080}
@@ -179,21 +209,31 @@ services:
       RAPPORT_SERVICE_URL: http://rapport-service:8084
       NOTIFICATION_SERVICE_URL: http://notification-service:8085
       BILLING_SERVICE_URL: http://billing-service:8086
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-Redis@2024}
+      EUREKA_SERVER_URL: http://discovery-service:8761/eureka/
+      CONFIG_SERVER_URL: http://config-service:8888
     ports:
       - "8080:8080"
     networks:
       - microlinks-net
     depends_on:
+      discovery-service:
+        condition: service_healthy
+      config-service:
+        condition: service_healthy
       keycloak:
-        condition: service_healthy
+        condition: service_started
       institution-service:
-        condition: service_healthy
+        condition: service_started
 
   institution-service:
     build:
       context: ./backend/institution-service
       dockerfile: Dockerfile
     container_name: ml-institution-service
+    restart: on-failure
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-institution:5432/institution_db
@@ -203,6 +243,10 @@ services:
       SPRING_REDIS_PASSWORD: ${REDIS_PASSWORD:-Redis@2024}
       KEYCLOAK_URL: ${KEYCLOAK_URL:-http://keycloak:8080}
       KEYCLOAK_REALM: ${KEYCLOAK_REALM:-microlinks}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-KeycloakAdmin@2024#}
+      EUREKA_SERVER_URL: http://discovery-service:8761/eureka/
+      CONFIG_SERVER_URL: http://config-service:8888
     networks:
       - microlinks-net
     healthcheck:
@@ -212,18 +256,23 @@ services:
       retries: 10
       start_period: 60s
     depends_on:
+      discovery-service:
+        condition: service_healthy
+      config-service:
+        condition: service_healthy
       postgres-institution:
         condition: service_healthy
       redis:
         condition: service_healthy
       keycloak:
-        condition: service_healthy
+        condition: service_started
 
   operation-service:
     build:
       context: ./backend/operation-service
       dockerfile: Dockerfile
     container_name: ml-operation-service
+    restart: on-failure
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-operation:5432/operation_db
@@ -237,6 +286,8 @@ services:
       KEYCLOAK_URL: ${KEYCLOAK_URL:-http://keycloak:8080}
       KEYCLOAK_REALM: ${KEYCLOAK_REALM:-microlinks}
       INSTITUTION_SERVICE_URL: http://institution-service:8082
+      EUREKA_SERVER_URL: http://discovery-service:8761/eureka/
+      CONFIG_SERVER_URL: http://config-service:8888
     networks:
       - microlinks-net
     healthcheck:
@@ -246,18 +297,23 @@ services:
       retries: 10
       start_period: 60s
     depends_on:
+      discovery-service:
+        condition: service_healthy
+      config-service:
+        condition: service_healthy
       postgres-operation:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
       institution-service:
-        condition: service_healthy
+        condition: service_started
 
   rapport-service:
     build:
       context: ./backend/rapport-service
       dockerfile: Dockerfile
     container_name: ml-rapport-service
+    restart: on-failure
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-rapport:5432/rapport_db
@@ -267,6 +323,8 @@ services:
       KEYCLOAK_REALM: ${KEYCLOAK_REALM:-microlinks}
       OPERATION_SERVICE_URL: http://operation-service:8083
       INSTITUTION_SERVICE_URL: http://institution-service:8082
+      EUREKA_SERVER_URL: http://discovery-service:8761/eureka/
+      CONFIG_SERVER_URL: http://config-service:8888
     networks:
       - microlinks-net
     healthcheck:
@@ -276,6 +334,10 @@ services:
       retries: 10
       start_period: 60s
     depends_on:
+      discovery-service:
+        condition: service_healthy
+      config-service:
+        condition: service_healthy
       postgres-rapport:
         condition: service_healthy
       operation-service:
@@ -286,6 +348,7 @@ services:
       context: ./backend/notification-service
       dockerfile: Dockerfile
     container_name: ml-notification-service
+    restart: on-failure
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-notification:5432/notification_db
@@ -300,6 +363,8 @@ services:
       SPRING_MAIL_PASSWORD: ${MAIL_PASSWORD:-}
       KEYCLOAK_URL: ${KEYCLOAK_URL:-http://keycloak:8080}
       KEYCLOAK_REALM: ${KEYCLOAK_REALM:-microlinks}
+      EUREKA_SERVER_URL: http://discovery-service:8761/eureka/
+      CONFIG_SERVER_URL: http://config-service:8888
     networks:
       - microlinks-net
     healthcheck:
@@ -309,18 +374,23 @@ services:
       retries: 10
       start_period: 60s
     depends_on:
+      discovery-service:
+        condition: service_healthy
+      config-service:
+        condition: service_healthy
       postgres-notification:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
       keycloak:
-        condition: service_healthy
+        condition: service_started
 
   billing-service:
     build:
       context: ./backend/billing-service
       dockerfile: Dockerfile
     container_name: ml-billing-service
+    restart: on-failure
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-billing:5432/billing_db
@@ -334,6 +404,8 @@ services:
       INSTITUTION_SERVICE_URL: http://institution-service:8082
       MICROLINKS_SERVICE_ACCOUNT_CLIENT_ID: ${BILLING_SA_CLIENT_ID:-billing-service}
       MICROLINKS_SERVICE_ACCOUNT_CLIENT_SECRET: ${BILLING_SA_CLIENT_SECRET:-}
+      EUREKA_SERVER_URL: http://discovery-service:8761/eureka/
+      CONFIG_SERVER_URL: http://config-service:8888
     networks:
       - microlinks-net
     healthcheck:
@@ -343,12 +415,16 @@ services:
       retries: 10
       start_period: 60s
     depends_on:
+      discovery-service:
+        condition: service_healthy
+      config-service:
+        condition: service_healthy
       postgres-billing:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
       keycloak:
-        condition: service_healthy
+        condition: service_started
 
   # ============================================
   # FRONTEND

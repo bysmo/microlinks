@@ -21,17 +21,17 @@ public interface OperationRepository extends JpaRepository<Operation, UUID> {
 
     @Query("""
         SELECT o FROM Operation o
-        WHERE (:search IS NULL OR
-               LOWER(o.referenceUnique) LIKE LOWER(CONCAT('%',:search,'%')) OR
-               LOWER(o.nomDonneurOrdre) LIKE LOWER(CONCAT('%',:search,'%')) OR
-               LOWER(o.nomBeneficiaire) LIKE LOWER(CONCAT('%',:search,'%')))
-        AND (:type IS NULL OR o.typeOperation = :type)
-        AND (:statut IS NULL OR o.statut = :statut)
-        AND (:emettriceId IS NULL OR o.institutionEmettriceId = :emettriceId)
-        AND (:beneficiaireId IS NULL OR o.institutionBeneficiaireId = :beneficiaireId)
-        AND (:dateDebut IS NULL OR o.dateOperation >= :dateDebut)
-        AND (:dateFin IS NULL OR o.dateOperation <= :dateFin)
-        AND (:devise IS NULL OR o.devise = :devise)
+        WHERE (cast(:search as string) IS NULL OR
+               LOWER(o.referenceUnique) LIKE LOWER(CONCAT('%', cast(:search as string), '%')) OR
+               LOWER(o.nomDonneurOrdre) LIKE LOWER(CONCAT('%', cast(:search as string), '%')) OR
+               LOWER(o.nomBeneficiaire) LIKE LOWER(CONCAT('%', cast(:search as string), '%')))
+        AND (cast(:type as string) IS NULL OR o.typeOperation = :type)
+        AND (cast(:statut as string) IS NULL OR o.statut = :statut)
+        AND (cast(:emettriceId as uuid) IS NULL OR o.institutionEmettriceId = :emettriceId)
+        AND (cast(:beneficiaireId as uuid) IS NULL OR o.institutionBeneficiaireId = :beneficiaireId)
+        AND (cast(:dateDebut as date) IS NULL OR o.dateOperation >= :dateDebut)
+        AND (cast(:dateFin as date) IS NULL OR o.dateOperation <= :dateFin)
+        AND (cast(:devise as string) IS NULL OR o.devise = :devise)
     """)
     Page<Operation> findWithFilters(
         @Param("search") String search,
