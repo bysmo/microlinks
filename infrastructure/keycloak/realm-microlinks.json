@@ -356,5 +356,19 @@
   },
   "internationalizationEnabled": true,
   "supportedLocales": ["fr", "en"],
-  "defaultLocale": "fr"
+  "defaultLocale": "fr",
+  "components": {
+    "org.keycloak.userprofile.UserProfileProvider": [
+      {
+        "id": "e309cbbe-244e-4f51-a9f4-7e8cc403a4cf",
+        "providerId": "declarative-user-profile",
+        "subComponents": {},
+        "config": {
+          "kc.user.profile.config": [
+            "{\"unmanagedAttributePolicy\":\"ENABLED\",\"attributes\":[{\"name\":\"username\",\"displayName\":\"${username}\",\"validations\":{\"length\":{\"min\":3,\"max\":255},\"username-prohibited-characters\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\"]}},{\"name\":\"email\",\"displayName\":\"${email}\",\"validations\":{\"email\":{},\"length\":{\"max\":255}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"firstName\",\"displayName\":\"${firstName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"lastName\",\"displayName\":\"${lastName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"institution_id\",\"displayName\":\"Institution ID\",\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\"]}},{\"name\":\"institution_nom\",\"displayName\":\"Institution Nom\",\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\"]}}]}"
+          ]
+        }
+      }
+    ]
+  }
 }

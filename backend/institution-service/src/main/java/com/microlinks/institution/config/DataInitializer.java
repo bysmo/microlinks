@@ -112,30 +112,33 @@ public class DataInitializer implements ApplicationRunner {
                                 .orElseThrow(() -> new IllegalStateException(
                                                 "Zone monétaire BCEAO introuvable après initialisation"));
 
-                // 2. Initialiser les institutions par défaut liées aux comptes de démo Keycloak
-                seedDefaultInstitution(
-                                UUID.fromString("b3d829b3-3f66-57bb-94b4-e8fcd5023de4"),
-                                "BANK-ATLANTIC",
-                                "Banque Atlantique",
-                                "Banque Atlantique Ouest",
-                                "CI",
-                                "CI046",
-                                "ATLANTIQUE",
-                                "A00030461",
-                                TypeInstitution.BANQUE,
-                                bceao);
-
-                seedDefaultInstitution(
-                                UUID.fromString("a2c918a2-2e55-46aa-83a3-d7efc4912cd3"),
-                                "MESO-OUEST",
-                                "MesoFinance Ouest",
-                                "MesoFinance de l'Ouest",
-                                "CI",
-                                "CI199",
-                                "MESOUEST",
-                                null,
-                                TypeInstitution.MESO_FINANCE,
-                                bceao);
+                /*
+                 * // 2. Initialiser les institutions par défaut liées aux comptes de démo
+                 * Keycloak
+                 * seedDefaultInstitution(
+                 * UUID.fromString("b3d829b3-3f66-57bb-94b4-e8fcd5023de4"),
+                 * "BANK-ATLANTIC",
+                 * "Banque Atlantique",
+                 * "Banque Atlantique Ouest",
+                 * "CI",
+                 * "CI046",
+                 * "ATLANTIQUE",
+                 * "A00030461",
+                 * TypeInstitution.BANQUE,
+                 * bceao);
+                 * 
+                 * seedDefaultInstitution(
+                 * UUID.fromString("a2c918a2-2e55-46aa-83a3-d7efc4912cd3"),
+                 * "MESO-OUEST",
+                 * "MesoFinance Ouest",
+                 * "MesoFinance de l'Ouest",
+                 * "CI",
+                 * "CI199",
+                 * "MESOUEST",
+                 * null,
+                 * TypeInstitution.MESO_FINANCE,
+                 * bceao);
+                 */
 
                 // 3. Initialiser les banques BCEAO
                 int banksCreated = 0;
@@ -186,35 +189,39 @@ public class DataInitializer implements ApplicationRunner {
                 }
         }
 
-        private void seedDefaultInstitution(UUID id, String code, String sigle, String nom, String country,
-                        String countryCode, String bic, String rtgsCode,
-                        TypeInstitution type, ZoneMonetaire zone) {
-                if (institutionRepository.findById(id).isEmpty() && !institutionRepository.existsByCode(code)) {
-                        String cleanName = sigle.toLowerCase().replaceAll("\\s+", "");
-                        Institution inst = Institution.builder()
-                                        .id(id)
-                                        .code(code)
-                                        .sigle(sigle)
-                                        .nom(nom)
-                                        .pays(country)
-                                        .typeInstitution(type)
-                                        .zoneMonetaire(zone)
-                                        .codeBanqueRegional(countryCode)
-                                        .codeBic(bic)
-                                        .codeParticipantRtgs(rtgsCode)
-                                        .statut(StatutEntite.ACTIF)
-                                        .dateAdhesion(LocalDate.of(2024, 1, 1))
-                                        .adresse("Abidjan, Côte d'Ivoire")
-                                        .telephone("+225 27 20 00 00")
-                                        .email("info@" + cleanName + ".com")
-                                        .siteWeb("www." + cleanName + ".com")
-                                        .createdBy("system")
-                                        .updatedBy("system")
-                                        .build();
-                        institutionRepository.save(inst);
-                        log.info("Institution par défaut créée : {} - {}", code, nom);
-                }
-        }
+        /*
+         * private void seedDefaultInstitution(UUID id, String code, String sigle,
+         * String nom, String country,
+         * String countryCode, String bic, String rtgsCode,
+         * TypeInstitution type, ZoneMonetaire zone) {
+         * if (institutionRepository.findById(id).isEmpty() &&
+         * !institutionRepository.existsByCode(code)) {
+         * String cleanName = sigle.toLowerCase().replaceAll("\\s+", "");
+         * Institution inst = Institution.builder()
+         * .id(id)
+         * .code(code)
+         * .sigle(sigle)
+         * .nom(nom)
+         * .pays(country)
+         * .typeInstitution(type)
+         * .zoneMonetaire(zone)
+         * .codeBanqueRegional(countryCode)
+         * .codeBic(bic)
+         * .codeParticipantRtgs(rtgsCode)
+         * .statut(StatutEntite.ACTIF)
+         * .dateAdhesion(LocalDate.of(2024, 1, 1))
+         * .adresse("Abidjan, Côte d'Ivoire")
+         * .telephone("+225 27 20 00 00")
+         * .email("info@" + cleanName + ".com")
+         * .siteWeb("www." + cleanName + ".com")
+         * .createdBy("system")
+         * .updatedBy("system")
+         * .build();
+         * institutionRepository.save(inst);
+         * log.info("Institution par défaut créée : {} - {}", code, nom);
+         * }
+         * }
+         */
 
         private record ZoneSeed(String code, String libelle, String devise, String description) {
         }

@@ -190,10 +190,26 @@ public class KeycloakProvisioningService {
                     .body(List.class);
 
             if (users != null && !users.isEmpty()) {
-                return (String) users.get(0).get("id");
+                String userId = (String) users.get(0).get("id");
+                
+                // Mettre à jour l'utilisateur existant avec les attributs et infos nécessaires
+                String updateUrl = usersUrl + "/" + userId;
+                Map<String, Object> updateJson = new HashMap<>(userJson);
+                updateJson.remove("credentials"); // Ne pas écraser/renvoyer les credentials d'origine
+                
+                restClient.put()
+                        .uri(updateUrl)
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(updateJson)
+                        .retrieve()
+                        .toBodilessEntity();
+                
+                log.info("Attributs et profil mis à jour avec succès pour l'utilisateur existant: {}", profile.username);
+                return userId;
             }
         } catch (Exception e) {
-            log.error("Impossible de récupérer l'ID de l'utilisateur {}", profile.username, e);
+            log.error("Impossible de récupérer ou mettre à jour l'utilisateur {}", profile.username, e);
         }
 
         return null;
