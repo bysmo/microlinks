@@ -47,6 +47,7 @@ public class OperationService {
         Page<Operation> ops = operationRepository.findWithFilters(
                 req.getSearch(), req.getTypeOperation(), req.getStatut(),
                 req.getInstitutionEmettriceId(), req.getInstitutionBeneficiaireId(),
+                req.getInstitutionId(),
                 req.getDateDebut(), req.getDateFin(), req.getDevise(),
                 pageable
         );

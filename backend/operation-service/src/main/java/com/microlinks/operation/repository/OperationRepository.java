@@ -29,6 +29,7 @@ public interface OperationRepository extends JpaRepository<Operation, UUID> {
         AND (cast(:statut as string) IS NULL OR o.statut = :statut)
         AND (cast(:emettriceId as uuid) IS NULL OR o.institutionEmettriceId = :emettriceId)
         AND (cast(:beneficiaireId as uuid) IS NULL OR o.institutionBeneficiaireId = :beneficiaireId)
+        AND (cast(:institutionId as uuid) IS NULL OR o.institutionEmettriceId = :institutionId OR o.institutionBeneficiaireId = :institutionId)
         AND (cast(:dateDebut as date) IS NULL OR o.dateOperation >= :dateDebut)
         AND (cast(:dateFin as date) IS NULL OR o.dateOperation <= :dateFin)
         AND (cast(:devise as string) IS NULL OR o.devise = :devise)
@@ -39,6 +40,7 @@ public interface OperationRepository extends JpaRepository<Operation, UUID> {
         @Param("statut") StatutOperation statut,
         @Param("emettriceId") UUID emettriceId,
         @Param("beneficiaireId") UUID beneficiaireId,
+        @Param("institutionId") UUID institutionId,
         @Param("dateDebut") LocalDate dateDebut,
         @Param("dateFin") LocalDate dateFin,
         @Param("devise") String devise,
@@ -47,13 +49,13 @@ public interface OperationRepository extends JpaRepository<Operation, UUID> {
 
     @Query("""
         SELECT COUNT(o) FROM Operation o
-        WHERE o.institutionEmettriceId = :institutionId OR o.institutionBeneficiaireId = :institutionId
+        WHERE (cast(:institutionId as uuid) IS NULL OR o.institutionEmettriceId = :institutionId OR o.institutionBeneficiaireId = :institutionId)
     """)
     long countByInstitution(@Param("institutionId") UUID institutionId);
 
     @Query("""
         SELECT COUNT(o) FROM Operation o
-        WHERE (o.institutionEmettriceId = :institutionId OR o.institutionBeneficiaireId = :institutionId)
+        WHERE (cast(:institutionId as uuid) IS NULL OR o.institutionEmettriceId = :institutionId OR o.institutionBeneficiaireId = :institutionId)
         AND o.statut IN :statuts
     """)
     long countByInstitutionAndStatuts(@Param("institutionId") UUID institutionId,
@@ -61,7 +63,7 @@ public interface OperationRepository extends JpaRepository<Operation, UUID> {
 
     @Query("""
         SELECT COUNT(o) FROM Operation o
-        WHERE (o.institutionEmettriceId = :institutionId OR o.institutionBeneficiaireId = :institutionId)
+        WHERE (cast(:institutionId as uuid) IS NULL OR o.institutionEmettriceId = :institutionId OR o.institutionBeneficiaireId = :institutionId)
         AND o.statut = :statut
     """)
     long countByInstitutionAndStatut(@Param("institutionId") UUID institutionId,

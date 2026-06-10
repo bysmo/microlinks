@@ -29,6 +29,8 @@ public class InstitutionDto {
     private String banqueCorrespondanteNom;
     private StatutEntite statut;
     private LocalDate dateAdhesion;
+    private String compteReglement;
+    private String banqueReglement;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private int nombreAgences;

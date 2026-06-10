@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowLeftRight, Building2, CheckCircle2, AlertTriangle,
-  TrendingUp, Clock, XCircle, RefreshCw, Plus
+  TrendingUp, Clock, XCircle, RefreshCw, Plus, CreditCard
 } from 'lucide-react';
 import { operationApi, institutionApi } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -26,6 +26,7 @@ export default function Dashboard() {
   const { user, hasAnyRole } = useAuth();
   const [opStats, setOpStats] = useState(null);
   const [instStats, setInstStats] = useState(null);
+  const [myInstitution, setMyInstitution] = useState(null);
   const [recentOps, setRecentOps] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -40,9 +41,14 @@ export default function Dashboard() {
       if (opStatsRes.status === 'fulfilled') setOpStats(opStatsRes.value.data);
       if (recentOpsRes.status === 'fulfilled') setRecentOps(recentOpsRes.value.data.content || []);
 
-      if (hasAnyRole('ADMIN_PLATEFORME', 'ADMIN_INSTITUTION')) {
+      if (hasAnyRole('ADMIN_PLATEFORME')) {
         const instRes = await institutionApi.getStats();
         setInstStats(instRes.data);
+      }
+
+      if (user?.institutionId) {
+        const instRes = await institutionApi.findById(user.institutionId);
+        setMyInstitution(instRes.data);
       }
     } catch (e) {
       console.error('Erreur chargement dashboard', e);
@@ -126,7 +132,9 @@ export default function Dashboard() {
               Bonjour, {user?.firstName || user?.name || 'Bienvenue'} 👋
             </h1>
             <p className="text-dark-300 mt-1">
-              Voici un aperçu des opérations MicroLinks aujourd'hui
+              {user?.institutionNom 
+                ? `Voici un aperçu des opérations pour ${user.institutionNom} aujourd'hui`
+                : "Voici un aperçu des opérations MicroLinks aujourd'hui"}
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -170,11 +178,11 @@ export default function Dashboard() {
         })}
       </div>
 
-      {/* Charts row */}
+      {/* Charts & Account row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         {/* Area Chart */}
-        <div className="glass-card p-6 lg:col-span-2" id="chart-area-operations">
+        <div className="glass-card p-6 lg:col-span-2 flex flex-col justify-between" id="chart-area-operations">
           <h3 className="text-white font-semibold mb-4">
             Activité de la semaine
           </h3>
@@ -204,33 +212,69 @@ export default function Dashboard() {
           </ResponsiveContainer>
         </div>
 
-        {/* Pie Chart */}
-        <div className="glass-card p-6" id="chart-pie-types">
-          <h3 className="text-white font-semibold mb-4">Types d'opérations</h3>
-          <ResponsiveContainer width="100%" height={220}>
-            <PieChart>
-              <Pie
-                data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={90}
-                paddingAngle={3} dataKey="value"
-              >
-                {pieData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS_PIE[index % COLORS_PIE.length]} />
-                ))}
-              </Pie>
-              <Tooltip
-                contentStyle={{
-                  background: '#1e293b', border: '1px solid #334155',
-                  borderRadius: '8px', color: '#f1f5f9'
-                }}
-              />
-              <Legend
-                iconType="circle"
-                formatter={(value) => (
-                  <span style={{ color: '#94a3b8', fontSize: 12 }}>{value}</span>
+        {/* Right Column: Compte de règlement card + Pie Chart or Pie Chart only */}
+        <div className="space-y-6 lg:col-span-1">
+          {myInstitution && (
+            <div className="glass-card p-5 bg-gradient-to-br from-primary-950/40 to-dark-900/60 border-primary-500/10 relative overflow-hidden flex flex-col justify-between h-48 group hover:border-primary-500/30 transition-all duration-300">
+              <div className="absolute -right-10 -top-10 w-40 h-40 bg-primary-500/5 rounded-full blur-3xl group-hover:bg-primary-500/10 transition-all duration-500" />
+              <div className="flex items-start justify-between">
+                <div>
+                  <span className="text-dark-400 text-[9px] font-bold uppercase tracking-wider block">Compte de Règlement</span>
+                  <span className="text-white font-mono font-bold text-sm block mt-1">
+                    {myInstitution.compteReglement || 'Non configuré'}
+                  </span>
+                </div>
+                <div className="w-8 h-8 rounded-lg bg-primary-500/15 text-primary-400 flex items-center justify-center">
+                  <CreditCard className="w-4 h-4" />
+                </div>
+              </div>
+
+              <div>
+                <span className="text-dark-400 text-[9px] block uppercase font-medium">Domiciliation</span>
+                <span className="text-white font-semibold text-xs block mt-0.5">{myInstitution.banqueReglement || 'Non configuré'}</span>
+              </div>
+
+              <div className="flex items-end justify-between border-t border-white/5 pt-2">
+                <div>
+                  <span className="text-dark-400 text-[8px] block uppercase font-bold">Solde Indicatif</span>
+                  <span className="text-yellow-400 text-base font-black tracking-wide">150 000 000 XOF</span>
+                </div>
+                <span className="text-emerald-400 text-[9px] font-bold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                  Actif
+                </span>
+              </div>
+            </div>
+          )}
+
+          <div className="glass-card p-6" id="chart-pie-types">
+            <h3 className="text-white font-semibold mb-4">Types d'opérations</h3>
+            <ResponsiveContainer width="100%" height={myInstitution ? 150 : 220}>
+              <PieChart>
+                <Pie
+                  data={pieData} cx="50%" cy="50%" innerRadius={myInstitution ? 40 : 60} outerRadius={myInstitution ? 65 : 90}
+                  paddingAngle={3} dataKey="value"
+                >
+                  {pieData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS_PIE[index % COLORS_PIE.length]} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    background: '#1e293b', border: '1px solid #334155',
+                    borderRadius: '8px', color: '#f1f5f9'
+                  }}
+                />
+                {!myInstitution && (
+                  <Legend
+                    iconType="circle"
+                    formatter={(value) => (
+                      <span style={{ color: '#94a3b8', fontSize: 12 }}>{value}</span>
+                    )}
+                  />
                 )}
-              />
-            </PieChart>
-          </ResponsiveContainer>
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
 

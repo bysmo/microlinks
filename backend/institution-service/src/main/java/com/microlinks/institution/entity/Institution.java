@@ -79,6 +79,12 @@ public class Institution {
     @Column(name = "date_adhesion")
     private LocalDate dateAdhesion;
 
+    @Column(name = "compte_reglement", length = 100)
+    private String compteReglement;
+
+    @Column(name = "banque_reglement", length = 200)
+    private String banqueReglement;
+
     @OneToMany(mappedBy = "institution", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Agence> agences;
 

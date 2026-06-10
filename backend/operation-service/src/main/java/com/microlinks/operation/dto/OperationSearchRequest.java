@@ -13,6 +13,7 @@ public class OperationSearchRequest {
     private StatutOperation statut;
     private UUID institutionEmettriceId;
     private UUID institutionBeneficiaireId;
+    private UUID institutionId;
     private LocalDate dateDebut;
     private LocalDate dateFin;
     private String devise;

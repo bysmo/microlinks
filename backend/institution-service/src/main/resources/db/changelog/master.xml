@@ -11,5 +11,6 @@
     <include file="db/changelog/v1/004-create-comptes-correspondance.xml"/>
     <include file="db/changelog/v1/005-insert-initial-data.xml"/>
     <include file="db/changelog/v1/006-add-banking-info.xml"/>
+    <include file="db/changelog/v1/007-add-compte-reglement.xml"/>
 
 </databaseChangeLog>

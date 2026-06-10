@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Building2, Users, ArrowLeftRight,
   CheckSquare, FileBarChart2, Settings, ChevronLeft,
   ChevronRight, LogOut, Bell, Link as LinkIcon,
-  Receipt, FileText
+  Receipt, FileText, Clock
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -21,7 +21,14 @@ const menuItems = [
     label: 'Institutions',
     icon: Building2,
     path: '/institutions',
-    roles: ['ADMIN_PLATEFORME', 'ADMIN_INSTITUTION'],
+    roles: ['ADMIN_PLATEFORME'],
+  },
+  {
+    id: 'mon-etablissement',
+    label: 'Mon établissement',
+    icon: Building2,
+    path: '/mon-etablissement',
+    roles: ['ADMIN_INSTITUTION'],
   },
   {
     id: 'clients',
@@ -36,6 +43,13 @@ const menuItems = [
     icon: ArrowLeftRight,
     path: '/operations/nouvelle',
     roles: ['ADMIN_INSTITUTION', 'AGENT_SAISIE'],
+  },
+  {
+    id: 'operations-du-jour',
+    label: 'Opérations du jour',
+    icon: Clock,
+    path: '/operations/du-jour',
+    roles: ['ADMIN_INSTITUTION', 'AGENT_SAISIE', 'AGENT_VALIDATION', 'LECTEUR'],
   },
   {
     id: 'operations',

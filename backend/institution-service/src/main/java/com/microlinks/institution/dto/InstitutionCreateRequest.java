@@ -46,4 +46,6 @@ public class InstitutionCreateRequest {
     private String codeBanqueRegional;
     private String codeBic;
     private String codeParticipantRtgs;
+    private String compteReglement;
+    private String banqueReglement;
 }

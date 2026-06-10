@@ -71,6 +71,22 @@ public class InstitutionController {
             @PathVariable UUID id,
             @Valid @RequestBody InstitutionCreateRequest request,
             @AuthenticationPrincipal Jwt jwt) {
+        
+        String userInstitutionId = jwt.getClaimAsString("institution_id");
+        boolean isPlatformAdmin = false;
+        java.util.Map<String, Object> realmAccess = jwt.getClaimAsMap("realm_access");
+        if (realmAccess != null && realmAccess.containsKey("roles")) {
+            @SuppressWarnings("unchecked")
+            java.util.List<String> roles = (java.util.List<String>) realmAccess.get("roles");
+            isPlatformAdmin = roles.contains("ADMIN_PLATEFORME");
+        }
+        
+        if (!isPlatformAdmin) {
+            if (userInstitutionId == null || !userInstitutionId.equals(id.toString())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+        }
+        
         return ResponseEntity.ok(institutionService.update(id, request, jwt.getSubject()));
     }
 

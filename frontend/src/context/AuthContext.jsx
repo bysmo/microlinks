@@ -27,6 +27,7 @@ export function AuthProvider({ children }) {
         const tokenParsed = keycloak.tokenParsed;
         const realmRoles = tokenParsed?.realm_access?.roles || [];
 
+        console.log('KEYCLOAK TOKEN PARSED:', tokenParsed);
         setUser({
           id: tokenParsed?.sub,
           username: tokenParsed?.preferred_username,

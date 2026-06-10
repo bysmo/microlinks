@@ -157,6 +157,15 @@ services:
     # Pas de healthcheck : l'image ubi9-micro ne contient ni curl ni wget.
     # Les services dépendants utilisent service_started + restart:on-failure.
 
+  adminer:
+    image: adminer
+    container_name: ml-adminer
+    ports:
+      - "8089:8080"
+    networks:
+      - microlinks-net
+
+
   discovery-service:
     build:
       context: ./infrastructure/discovery-service

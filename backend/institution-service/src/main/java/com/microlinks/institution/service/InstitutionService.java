@@ -104,6 +104,8 @@ public class InstitutionService {
                 .codeBic(request.getCodeBic())
                 .codeParticipantRtgs(request.getCodeParticipantRtgs())
                 .codeMicrolink(codeMicrolink)
+                .compteReglement(request.getCompteReglement())
+                .banqueReglement(request.getBanqueReglement())
                 .statut(StatutEntite.INACTIF) // Commence en attente de validation
                 .createdBy(currentUser)
                 .updatedBy(currentUser)
@@ -173,6 +175,8 @@ public class InstitutionService {
         institution.setCodeBanqueRegional(request.getCodeBanqueRegional());
         institution.setCodeBic(request.getCodeBic());
         institution.setCodeParticipantRtgs(request.getCodeParticipantRtgs());
+        institution.setCompteReglement(request.getCompteReglement());
+        institution.setBanqueReglement(request.getBanqueReglement());
         institution.setUpdatedBy(currentUser);
 
         if (request.getBanqueCorrespondanteId() != null) {
@@ -235,6 +239,8 @@ public class InstitutionService {
         dto.setCodeBic(i.getCodeBic());
         dto.setCodeParticipantRtgs(i.getCodeParticipantRtgs());
         dto.setCodeMicrolink(i.getCodeMicrolink());
+        dto.setCompteReglement(i.getCompteReglement());
+        dto.setBanqueReglement(i.getBanqueReglement());
         if (i.getBanqueCorrespondante() != null) {
             dto.setBanqueCorrespondanteId(i.getBanqueCorrespondante().getId());
             dto.setBanqueCorrespondanteNom(i.getBanqueCorrespondante().getNom());

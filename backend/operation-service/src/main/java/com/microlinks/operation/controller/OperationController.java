@@ -41,7 +41,17 @@ public class OperationController {
             @RequestParam(required = false) String dateFin,
             @RequestParam(required = false) String devise,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size,
+            @AuthenticationPrincipal Jwt jwt) {
+
+        UUID userInstId = extractInstitutionId(jwt);
+        boolean isPlatformAdmin = false;
+        java.util.Map<String, Object> realmAccess = jwt.getClaimAsMap("realm_access");
+        if (realmAccess != null && realmAccess.containsKey("roles")) {
+            @SuppressWarnings("unchecked")
+            java.util.List<String> roles = (java.util.List<String>) realmAccess.get("roles");
+            isPlatformAdmin = roles.contains("ADMIN_PLATEFORME");
+        }
 
         OperationSearchRequest req = new OperationSearchRequest();
         req.setSearch(search);
@@ -49,6 +59,9 @@ public class OperationController {
         req.setStatut(statut);
         req.setInstitutionEmettriceId(institutionEmettriceId);
         req.setInstitutionBeneficiaireId(institutionBeneficiaireId);
+        if (!isPlatformAdmin) {
+            req.setInstitutionId(userInstId);
+        }
         req.setDevise(devise);
         if (dateDebut != null) req.setDateDebut(java.time.LocalDate.parse(dateDebut));
         if (dateFin != null) req.setDateFin(java.time.LocalDate.parse(dateFin));
