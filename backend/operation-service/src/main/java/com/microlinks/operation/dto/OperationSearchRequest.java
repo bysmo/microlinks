@@ -14,6 +14,8 @@ public class OperationSearchRequest {
     private UUID institutionEmettriceId;
     private UUID institutionBeneficiaireId;
     private UUID institutionId;
+    private UUID banqueCorrespondanteEmettriceId;
+    private UUID banqueCorrespondanteReceptriceId;
     private LocalDate dateDebut;
     private LocalDate dateFin;
     private String devise;

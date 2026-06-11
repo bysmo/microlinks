@@ -7,12 +7,21 @@ import { useLocation } from 'react-router-dom';
 const PAGE_TITLES = {
   '/dashboard': 'Tableau de bord',
   '/institutions': 'Gestion des Institutions',
-  '/clients': 'Comptes Clients',
-  '/operations': 'Suivi des Opérations',
-  '/operations/nouvelle': 'Nouvelle Opération',
+  '/mon-etablissement': 'Mon Établissement',
+  '/operations/du-jour': 'Opérations du Jour',
+  '/operations': 'Historique des opérations',
   '/rapports': 'Rapports & Exports',
+  '/facturation': 'Facturation',
+  '/mes-factures': 'Mes Factures',
   '/administration': 'Administration',
 };
+
+// Resolve in order of specificity (longest match wins)
+function resolvePageTitle(pathname) {
+  const sortedKeys = Object.keys(PAGE_TITLES).sort((a, b) => b.length - a.length);
+  const match = sortedKeys.find(k => pathname === k || pathname.startsWith(k + '/'));
+  return match ? PAGE_TITLES[match] : 'MicroLinks';
+}
 
 export default function Header() {
   const { user } = useAuth();
@@ -20,9 +29,7 @@ export default function Header() {
   const { notifications, unreadCount, markAllRead } = useNotifications();
   const [showNotif, setShowNotif] = useState(false);
 
-  const pageTitle = PAGE_TITLES[location.pathname] ||
-    Object.entries(PAGE_TITLES).find(([k]) => location.pathname.startsWith(k))?.[1] ||
-    'MicroLinks';
+  const pageTitle = resolvePageTitle(location.pathname);
 
   return (
     <header

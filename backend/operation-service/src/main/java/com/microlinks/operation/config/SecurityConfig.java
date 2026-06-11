@@ -1,4 +1,4 @@
-package com.microlinks.institution.config;
+package com.microlinks.operation.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -27,8 +27,6 @@ public class SecurityConfig {
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/actuator/health", "/api-docs/**", "/swagger-ui/**").permitAll()
-                // Données de référence : zones monétaires accessibles sans token
-                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/zones-monetaires", "/api/v1/zones-monetaires/**").permitAll()
                 .anyRequest().authenticated()
             )
             .oauth2ResourceServer(oauth2 -> oauth2
@@ -49,7 +47,7 @@ public class SecurityConfig {
                 for (String role : roles) {
                     // Ajouter le rôle Keycloak brut
                     authorities.add(new SimpleGrantedAuthority("ROLE_" + role));
-                    // Mapper les rôles Keycloak vers les rôles applicatifs standards
+                    // Mapper vers les rôles applicatifs standards
                     String mapped = mapKeycloakRole(role);
                     if (mapped != null) {
                         authorities.add(new SimpleGrantedAuthority("ROLE_" + mapped));
@@ -62,8 +60,8 @@ public class SecurityConfig {
     }
 
     /**
-     * Normalise les rôles créés automatiquement par Keycloak lors du provisionnement
-     * des institutions vers les rôles applicatifs standards utilisés dans les @PreAuthorize.
+     * Normalise les rôles Keycloak des institutions (BANK_ADMIN, MESO_AGENT, etc.)
+     * vers les rôles applicatifs utilisés dans les @PreAuthorize.
      */
     private String mapKeycloakRole(String keycloakRole) {
         return switch (keycloakRole) {

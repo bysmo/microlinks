@@ -11,6 +11,7 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 import java.util.*;
+import java.util.Set;
 
 @Service
 @Slf4j
@@ -37,6 +38,9 @@ public class KeycloakProvisioningService {
             if (adminToken == null) {
                 throw new RuntimeException("Impossible d'obtenir le jeton administrateur de Keycloak");
             }
+
+            // S'assurer que les Protocol Mappers sont configurés pour inclure institution_id dans le JWT
+            ensureProtocolMappers(adminToken);
 
             String cleanPrefix = (institution.getSigle() != null && !institution.getSigle().isBlank()
                     ? institution.getSigle() : institution.getCode())
@@ -88,6 +92,135 @@ public class KeycloakProvisioningService {
             throw new RuntimeException("Erreur de provisionnement Keycloak: " + e.getMessage(), e);
         }
     }
+
+    /**
+     * S'assure que les Protocol Mappers existent dans le realm pour exposer
+     * les attributs utilisateur (institution_id, institution_nom) dans le token JWT.
+     * Ces mappers sont créés au niveau du realm (default client scopes) pour s'appliquer
+     * à tous les clients.
+     */
+    @SuppressWarnings("unchecked")
+    private void ensureProtocolMappers(String adminToken) {
+        try {
+            // Récupérer la liste des clients pour trouver le client frontend
+            String clientsUrl = keycloakUrl + "/admin/realms/" + realm + "/clients";
+            List<Map<String, Object>> clients = restClient.get()
+                    .uri(clientsUrl + "?clientId=microlinks-frontend&max=1")
+                    .header("Authorization", "Bearer " + adminToken)
+                    .retrieve()
+                    .body(List.class);
+
+            if (clients == null || clients.isEmpty()) {
+                log.warn("Client 'microlinks-frontend' non trouvé, tentative avec le realm par défaut");
+                ensureRealmMappers(adminToken);
+                return;
+            }
+
+            String clientId = (String) clients.get(0).get("id");
+            String mappersUrl = keycloakUrl + "/admin/realms/" + realm + "/clients/" + clientId + "/protocol-mappers/models";
+
+            // Récupérer les mappers existants
+            List<Map<String, Object>> existingMappers = restClient.get()
+                    .uri(mappersUrl)
+                    .header("Authorization", "Bearer " + adminToken)
+                    .retrieve()
+                    .body(List.class);
+
+            Set<String> existingMapperNames = new java.util.HashSet<>();
+            if (existingMappers != null) {
+                existingMappers.forEach(m -> existingMapperNames.add((String) m.get("name")));
+            }
+
+            // Créer les mappers manquants
+            createAttributeMapper(adminToken, mappersUrl, existingMapperNames, "institution_id", "institution_id");
+            createAttributeMapper(adminToken, mappersUrl, existingMapperNames, "institution_nom", "institution_nom");
+
+        } catch (Exception e) {
+            log.warn("Impossible de configurer les Protocol Mappers pour le client frontend: {}. Tentative au niveau realm.", e.getMessage());
+            ensureRealmMappers(adminToken);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void ensureRealmMappers(String adminToken) {
+        try {
+            // Chercher le scope "profile" ou créer des mappers directement au niveau realm
+            String scopesUrl = keycloakUrl + "/admin/realms/" + realm + "/client-scopes";
+            List<Map<String, Object>> scopes = restClient.get()
+                    .uri(scopesUrl)
+                    .header("Authorization", "Bearer " + adminToken)
+                    .retrieve()
+                    .body(List.class);
+
+            if (scopes == null) return;
+
+            // Trouver le scope "microlinks-institution" ou "profile"
+            String scopeId = scopes.stream()
+                    .filter(s -> "microlinks-institution".equals(s.get("name")) || "profile".equals(s.get("name")))
+                    .map(s -> (String) s.get("id"))
+                    .findFirst().orElse(null);
+
+            if (scopeId == null) {
+                log.warn("Aucun client scope approprié trouvé pour les Protocol Mappers");
+                return;
+            }
+
+            String mappersUrl = keycloakUrl + "/admin/realms/" + realm + "/client-scopes/" + scopeId + "/protocol-mappers/models";
+
+            List<Map<String, Object>> existingMappers = restClient.get()
+                    .uri(mappersUrl)
+                    .header("Authorization", "Bearer " + adminToken)
+                    .retrieve()
+                    .body(List.class);
+
+            Set<String> existingMapperNames = new java.util.HashSet<>();
+            if (existingMappers != null) {
+                existingMappers.forEach(m -> existingMapperNames.add((String) m.get("name")));
+            }
+
+            createAttributeMapper(adminToken, mappersUrl, existingMapperNames, "institution_id", "institution_id");
+            createAttributeMapper(adminToken, mappersUrl, existingMapperNames, "institution_nom", "institution_nom");
+
+        } catch (Exception e) {
+            log.error("Erreur lors de la configuration des mappers au niveau realm: {}", e.getMessage());
+        }
+    }
+
+    private void createAttributeMapper(String adminToken, String mappersUrl,
+                                        Set<String> existingNames, String mapperName, String attributeName) {
+        if (existingNames.contains(mapperName)) {
+            log.debug("Protocol Mapper '{}' existe déjà", mapperName);
+            return;
+        }
+        try {
+            Map<String, Object> mapper = new HashMap<>();
+            mapper.put("name", mapperName);
+            mapper.put("protocol", "openid-connect");
+            mapper.put("protocolMapper", "oidc-usermodel-attribute-mapper");
+            Map<String, String> config = new HashMap<>();
+            config.put("user.attribute", attributeName);
+            config.put("claim.name", attributeName);
+            config.put("jsonType.label", "String");
+            config.put("id.token.claim", "true");
+            config.put("access.token.claim", "true");
+            config.put("userinfo.token.claim", "true");
+            config.put("multivalued", "false");
+            mapper.put("config", config);
+
+            restClient.post()
+                    .uri(mappersUrl)
+                    .header("Authorization", "Bearer " + adminToken)
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                    .body(mapper)
+                    .retrieve()
+                    .toBodilessEntity();
+
+            log.info("Protocol Mapper '{}' créé avec succès", mapperName);
+        } catch (Exception e) {
+            log.warn("Impossible de créer le Protocol Mapper '{}': {}", mapperName, e.getMessage());
+        }
+    }
+
 
     private void createAndAssignRole(String adminToken, Institution institution, UserProfile profile) {
         // A. Créer le user

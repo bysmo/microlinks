@@ -6,6 +6,7 @@ import Layout from './components/layout/Layout';
 import Dashboard from './pages/Dashboard/Dashboard';
 import OperationsListPage from './pages/Operations/OperationsListPage';
 import OperationsDuJourPage from './pages/Operations/OperationsDuJourPage';
+import OperationDetailPage from './pages/Operations/OperationDetailPage';
 import InstitutionsPage from './pages/Institutions/InstitutionsPage';
 import MonEtablissementPage from './pages/Institutions/MonEtablissementPage';
 import BillingAdminPage from './pages/Billing/BillingAdminPage';
@@ -85,13 +86,12 @@ function AppContent() {
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="operations" element={<OperationsListPage />} />
+        <Route path="operations/:id" element={<OperationDetailPage />} />
         <Route path="operations/du-jour" element={<OperationsDuJourPage />} />
-        <Route path="operations/nouvelle" element={<MockPage title="Nouvelle Opération" />} />
         <Route path="institutions" element={<InstitutionsPage />} />
         <Route path="mon-etablissement" element={<MonEtablissementPage />} />
         <Route path="facturation" element={<BillingAdminPage />} />
         <Route path="mes-factures" element={<MesFacturesPage />} />
-        <Route path="clients" element={<MockPage title="Comptes Clients" />} />
         <Route path="rapports" element={<MockPage title="Rapports & Exports" />} />
         <Route path="administration" element={<AdministrationPage />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />

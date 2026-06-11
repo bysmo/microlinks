@@ -56,6 +56,15 @@ export const institutionApi = {
   getStats: () => api.get('/api/v1/institutions/stats'),
 };
 
+// ======================== COMPTES DE RÈGLEMENT ========================
+
+export const compteReglementApi = {
+  findAll: (institutionId) => api.get(`/api/v1/institutions/${institutionId}/comptes-reglement`),
+  create: (institutionId, data) => api.post(`/api/v1/institutions/${institutionId}/comptes-reglement`, data),
+  update: (institutionId, compteId, data) => api.put(`/api/v1/institutions/${institutionId}/comptes-reglement/${compteId}`, data),
+  remove: (institutionId, compteId) => api.delete(`/api/v1/institutions/${institutionId}/comptes-reglement/${compteId}`),
+};
+
 // ======================== ZONES MONETAIRES ========================
 
 export const zoneMonetaireApi = {

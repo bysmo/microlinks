@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Filter, RefreshCw, Download, Search, Eye } from 'lucide-react';
+import { Filter, RefreshCw, Download, Search, Eye } from 'lucide-react';
 import DataTable from '../../components/common/DataTable';
 import StatusBadge from '../../components/common/StatusBadge';
+import OperationDetailModal from '../../components/common/OperationDetailModal';
 import { operationApi, rapportApi, downloadBlob } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -40,6 +41,8 @@ export default function OperationsListPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
+  const [selectedOperationId, setSelectedOperationId] = useState(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
 
   const [filters, setFilters] = useState({
     search: '',
@@ -182,7 +185,7 @@ export default function OperationsListPage() {
       cell: ({ row }) => (
         <div className="flex items-center gap-1 justify-end">
           <button
-            onClick={(e) => { e.stopPropagation(); navigate(`/operations/${row.original.id}`); }}
+            onClick={(e) => { e.stopPropagation(); setSelectedOperationId(row.original.id); setShowDetailModal(true); }}
             className="btn-ghost btn-sm p-1.5"
             id={`btn-view-op-${row.original.id}`}
             title="Voir le détail"
@@ -193,7 +196,7 @@ export default function OperationsListPage() {
       ),
       size: 60,
     },
-  ], [navigate]);
+  ], [navigate, setSelectedOperationId, setShowDetailModal]);
 
   return (
     <div className="space-y-5 animate-slide-up" id="operations-list-page">
@@ -201,7 +204,7 @@ export default function OperationsListPage() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-white text-xl font-bold">Suivi des Opérations</h1>
+          <h1 className="text-white text-xl font-bold">Historique des opérations</h1>
           <p className="text-dark-400 text-sm mt-0.5">
             {totalElements.toLocaleString('fr-FR')} opération(s)
           </p>
@@ -239,16 +242,6 @@ export default function OperationsListPage() {
             </div>
           </div>
 
-          {hasAnyRole('ADMIN_PLATEFORME', 'ADMIN_INSTITUTION', 'AGENT_SAISIE') && (
-            <button
-              onClick={() => navigate('/operations/nouvelle')}
-              className="btn-primary btn-sm"
-              id="btn-new-operation"
-            >
-              <Plus className="w-4 h-4" />
-              Nouvelle
-            </button>
-          )}
         </div>
       </div>
 
@@ -335,7 +328,15 @@ export default function OperationsListPage() {
         onPageSizeChange={(s) => { setPageSize(s); setPage(0); }}
         isLoading={isLoading}
         emptyMessage="Aucune opération trouvée"
-        onRowClick={(row) => navigate(`/operations/${row.id}`)}
+        onRowClick={(row) => { setSelectedOperationId(row.id); setShowDetailModal(true); }}
+      />
+
+      {/* Détail Opération Modal */}
+      <OperationDetailModal
+        isOpen={showDetailModal}
+        onClose={() => { setShowDetailModal(false); setSelectedOperationId(null); }}
+        operationId={selectedOperationId}
+        onSuccess={fetchData}
       />
     </div>
   );

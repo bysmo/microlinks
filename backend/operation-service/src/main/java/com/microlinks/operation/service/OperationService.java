@@ -48,6 +48,7 @@ public class OperationService {
                 req.getSearch(), req.getTypeOperation(), req.getStatut(),
                 req.getInstitutionEmettriceId(), req.getInstitutionBeneficiaireId(),
                 req.getInstitutionId(),
+                req.getBanqueCorrespondanteEmettriceId(), req.getBanqueCorrespondanteReceptriceId(),
                 req.getDateDebut(), req.getDateFin(), req.getDevise(),
                 pageable
         );

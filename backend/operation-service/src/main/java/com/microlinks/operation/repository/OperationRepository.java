@@ -24,12 +24,19 @@ public interface OperationRepository extends JpaRepository<Operation, UUID> {
         WHERE (cast(:search as string) IS NULL OR
                LOWER(o.referenceUnique) LIKE LOWER(CONCAT('%', cast(:search as string), '%')) OR
                LOWER(o.nomDonneurOrdre) LIKE LOWER(CONCAT('%', cast(:search as string), '%')) OR
-               LOWER(o.nomBeneficiaire) LIKE LOWER(CONCAT('%', cast(:search as string), '%')))
+               LOWER(o.nomBeneficiaire) LIKE LOWER(CONCAT('%', cast(:search as string), '%')) OR
+               LOWER(o.nomInstitutionEmettrice) LIKE LOWER(CONCAT('%', cast(:search as string), '%')) OR
+               LOWER(o.nomInstitutionBeneficiaire) LIKE LOWER(CONCAT('%', cast(:search as string), '%')))
         AND (cast(:type as string) IS NULL OR o.typeOperation = :type)
         AND (cast(:statut as string) IS NULL OR o.statut = :statut)
         AND (cast(:emettriceId as uuid) IS NULL OR o.institutionEmettriceId = :emettriceId)
         AND (cast(:beneficiaireId as uuid) IS NULL OR o.institutionBeneficiaireId = :beneficiaireId)
-        AND (cast(:institutionId as uuid) IS NULL OR o.institutionEmettriceId = :institutionId OR o.institutionBeneficiaireId = :institutionId)
+        AND (cast(:institutionId as uuid) IS NULL OR o.institutionEmettriceId = :institutionId
+             OR o.institutionBeneficiaireId = :institutionId
+             OR o.banqueCorrespondanteEmettriceId = :institutionId
+             OR o.banqueCorrespondanteReceptriceId = :institutionId)
+        AND (cast(:banqueEmettriceId as uuid) IS NULL OR o.banqueCorrespondanteEmettriceId = :banqueEmettriceId)
+        AND (cast(:banqueReceptriceId as uuid) IS NULL OR o.banqueCorrespondanteReceptriceId = :banqueReceptriceId)
         AND (cast(:dateDebut as date) IS NULL OR o.dateOperation >= :dateDebut)
         AND (cast(:dateFin as date) IS NULL OR o.dateOperation <= :dateFin)
         AND (cast(:devise as string) IS NULL OR o.devise = :devise)
@@ -41,6 +48,8 @@ public interface OperationRepository extends JpaRepository<Operation, UUID> {
         @Param("emettriceId") UUID emettriceId,
         @Param("beneficiaireId") UUID beneficiaireId,
         @Param("institutionId") UUID institutionId,
+        @Param("banqueEmettriceId") UUID banqueEmettriceId,
+        @Param("banqueReceptriceId") UUID banqueReceptriceId,
         @Param("dateDebut") LocalDate dateDebut,
         @Param("dateFin") LocalDate dateFin,
         @Param("devise") String devise,

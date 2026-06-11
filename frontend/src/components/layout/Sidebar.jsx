@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
-  LayoutDashboard, Building2, Users, ArrowLeftRight,
+  LayoutDashboard, Building2,
   CheckSquare, FileBarChart2, Settings, ChevronLeft,
-  ChevronRight, LogOut, Bell, Link as LinkIcon,
+  ChevronRight, LogOut, Link as LinkIcon,
   Receipt, FileText, Clock
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -31,20 +31,6 @@ const menuItems = [
     roles: ['ADMIN_INSTITUTION'],
   },
   {
-    id: 'clients',
-    label: 'Comptes Clients',
-    icon: Users,
-    path: '/clients',
-    roles: ['ADMIN_INSTITUTION', 'AGENT_SAISIE', 'AGENT_VALIDATION'],
-  },
-  {
-    id: 'operations-saisie',
-    label: 'Nouvelle Opération',
-    icon: ArrowLeftRight,
-    path: '/operations/nouvelle',
-    roles: ['ADMIN_INSTITUTION', 'AGENT_SAISIE'],
-  },
-  {
     id: 'operations-du-jour',
     label: 'Opérations du jour',
     icon: Clock,
@@ -53,7 +39,7 @@ const menuItems = [
   },
   {
     id: 'operations',
-    label: 'Suivi Opérations',
+    label: 'Historique des opérations',
     icon: CheckSquare,
     path: '/operations',
     roles: ['ADMIN_INSTITUTION', 'AGENT_SAISIE', 'AGENT_VALIDATION', 'LECTEUR'],
@@ -123,8 +109,16 @@ export default function Sidebar() {
           <ul className="space-y-1" role="navigation">
             {visibleItems.map(item => {
               const Icon = item.icon;
-              const isActive = location.pathname === item.path ||
-                (item.path !== '/dashboard' && location.pathname.startsWith(item.path));
+            // A menu item is active if it's an exact match,
+            // OR the current path is a sub-path AND no more-specific visible item already matches it
+            const isExactMatch = location.pathname === item.path;
+            const isSubPath = item.path !== '/dashboard' &&
+              location.pathname.startsWith(item.path + '/');
+            // Prevent a parent path from activating when a more specific menu item matches
+            const moreSpecificItemMatches = visibleItems.some(
+              vi => vi.path !== item.path && location.pathname.startsWith(vi.path)
+            );
+            const isActive = isExactMatch || (isSubPath && !moreSpecificItemMatches);
 
               return (
                 <li key={item.id}>

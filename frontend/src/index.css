@@ -329,7 +329,7 @@
   }
 
   .modal-header {
-    @apply flex items-center justify-between p-5;
+    @apply flex items-center justify-between px-5 py-3;
     background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%) !important;
     color: #ffffff !important;
     border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
@@ -337,7 +337,7 @@
 
   .modal-header h2,
   .modal-header h3 {
-    @apply text-white font-bold text-lg;
+    @apply text-white font-semibold text-base;
     color: #ffffff !important;
     margin: 0 !important;
   }
@@ -360,7 +360,7 @@
   }
 
   .modal-footer {
-    @apply flex items-center justify-end gap-3 p-5 border-t border-slate-200;
+    @apply flex items-center justify-end gap-3 px-5 py-3 border-t border-slate-200;
     background-color: #f8fafc !important;
   }
 

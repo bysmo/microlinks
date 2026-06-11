@@ -37,6 +37,8 @@ public class OperationController {
             @RequestParam(required = false) StatutOperation statut,
             @RequestParam(required = false) UUID institutionEmettriceId,
             @RequestParam(required = false) UUID institutionBeneficiaireId,
+            @RequestParam(required = false) UUID banqueCorrespondanteEmettriceId,
+            @RequestParam(required = false) UUID banqueCorrespondanteReceptriceId,
             @RequestParam(required = false) String dateDebut,
             @RequestParam(required = false) String dateFin,
             @RequestParam(required = false) String devise,
@@ -59,6 +61,8 @@ public class OperationController {
         req.setStatut(statut);
         req.setInstitutionEmettriceId(institutionEmettriceId);
         req.setInstitutionBeneficiaireId(institutionBeneficiaireId);
+        req.setBanqueCorrespondanteEmettriceId(banqueCorrespondanteEmettriceId);
+        req.setBanqueCorrespondanteReceptriceId(banqueCorrespondanteReceptriceId);
         if (!isPlatformAdmin) {
             req.setInstitutionId(userInstId);
         }

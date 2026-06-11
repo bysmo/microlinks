@@ -157,7 +157,9 @@
         "description": "SaaS Platform Administrator",
         "composite": true,
         "composites": {
-          "realm": ["ADMIN_PLATEFORME"]
+          "realm": [
+            "ADMIN_PLATEFORME"
+          ]
         }
       },
       {
@@ -165,7 +167,10 @@
         "description": "Meso-finance Administrator",
         "composite": true,
         "composites": {
-          "realm": ["ADMIN_INSTITUTION", "LECTEUR"]
+          "realm": [
+            "ADMIN_INSTITUTION",
+            "LECTEUR"
+          ]
         }
       },
       {
@@ -173,7 +178,10 @@
         "description": "Meso-finance Saisie Agent",
         "composite": true,
         "composites": {
-          "realm": ["AGENT_SAISIE", "LECTEUR"]
+          "realm": [
+            "AGENT_SAISIE",
+            "LECTEUR"
+          ]
         }
       },
       {
@@ -181,7 +189,10 @@
         "description": "Meso-finance Validator Agent",
         "composite": true,
         "composites": {
-          "realm": ["AGENT_VALIDATION", "LECTEUR"]
+          "realm": [
+            "AGENT_VALIDATION",
+            "LECTEUR"
+          ]
         }
       },
       {
@@ -189,7 +200,10 @@
         "description": "Bank Administrator",
         "composite": true,
         "composites": {
-          "realm": ["ADMIN_INSTITUTION", "LECTEUR"]
+          "realm": [
+            "ADMIN_INSTITUTION",
+            "LECTEUR"
+          ]
         }
       },
       {
@@ -197,7 +211,10 @@
         "description": "Bank Saisie Agent",
         "composite": true,
         "composites": {
-          "realm": ["AGENT_SAISIE", "LECTEUR"]
+          "realm": [
+            "AGENT_SAISIE",
+            "LECTEUR"
+          ]
         }
       },
       {
@@ -205,7 +222,10 @@
         "description": "Bank Validator Agent",
         "composite": true,
         "composites": {
-          "realm": ["AGENT_VALIDATION", "LECTEUR"]
+          "realm": [
+            "AGENT_VALIDATION",
+            "LECTEUR"
+          ]
         }
       }
     ]
@@ -225,7 +245,9 @@
           "temporary": false
         }
       ],
-      "realmRoles": ["ADMIN"]
+      "realmRoles": [
+        "ADMIN"
+      ]
     },
     {
       "username": "meso.admin",
@@ -235,8 +257,12 @@
       "enabled": true,
       "emailVerified": true,
       "attributes": {
-        "institution_id": ["a2c918a2-2e55-46aa-83a3-d7efc4912cd3"],
-        "institution_nom": ["MesoFinance de l'Ouest"]
+        "institution_id": [
+          "a2c918a2-2e55-46aa-83a3-d7efc4912cd3"
+        ],
+        "institution_nom": [
+          "MesoFinance de l'Ouest"
+        ]
       },
       "credentials": [
         {
@@ -245,7 +271,9 @@
           "temporary": false
         }
       ],
-      "realmRoles": ["MESO_ADMIN"]
+      "realmRoles": [
+        "MESO_ADMIN"
+      ]
     },
     {
       "username": "meso.agent",
@@ -255,8 +283,12 @@
       "enabled": true,
       "emailVerified": true,
       "attributes": {
-        "institution_id": ["a2c918a2-2e55-46aa-83a3-d7efc4912cd3"],
-        "institution_nom": ["MesoFinance de l'Ouest"]
+        "institution_id": [
+          "a2c918a2-2e55-46aa-83a3-d7efc4912cd3"
+        ],
+        "institution_nom": [
+          "MesoFinance de l'Ouest"
+        ]
       },
       "credentials": [
         {
@@ -265,7 +297,9 @@
           "temporary": false
         }
       ],
-      "realmRoles": ["MESO_AGENT"]
+      "realmRoles": [
+        "MESO_AGENT"
+      ]
     },
     {
       "username": "meso.valid",
@@ -275,8 +309,12 @@
       "enabled": true,
       "emailVerified": true,
       "attributes": {
-        "institution_id": ["a2c918a2-2e55-46aa-83a3-d7efc4912cd3"],
-        "institution_nom": ["MesoFinance de l'Ouest"]
+        "institution_id": [
+          "a2c918a2-2e55-46aa-83a3-d7efc4912cd3"
+        ],
+        "institution_nom": [
+          "MesoFinance de l'Ouest"
+        ]
       },
       "credentials": [
         {
@@ -285,7 +323,9 @@
           "temporary": false
         }
       ],
-      "realmRoles": ["MESO_VALID"]
+      "realmRoles": [
+        "MESO_VALID"
+      ]
     },
     {
       "username": "bank.admin",
@@ -295,8 +335,12 @@
       "enabled": true,
       "emailVerified": true,
       "attributes": {
-        "institution_id": ["b3d829b3-3f66-57bb-94b4-e8fcd5023de4"],
-        "institution_nom": ["Banque Atlantique Ouest"]
+        "institution_id": [
+          "b3d829b3-3f66-57bb-94b4-e8fcd5023de4"
+        ],
+        "institution_nom": [
+          "Banque Atlantique Ouest"
+        ]
       },
       "credentials": [
         {
@@ -305,7 +349,9 @@
           "temporary": false
         }
       ],
-      "realmRoles": ["BANK_ADMIN"]
+      "realmRoles": [
+        "BANK_ADMIN"
+      ]
     },
     {
       "username": "bank.agent",
@@ -315,8 +361,12 @@
       "enabled": true,
       "emailVerified": true,
       "attributes": {
-        "institution_id": ["b3d829b3-3f66-57bb-94b4-e8fcd5023de4"],
-        "institution_nom": ["Banque Atlantique Ouest"]
+        "institution_id": [
+          "b3d829b3-3f66-57bb-94b4-e8fcd5023de4"
+        ],
+        "institution_nom": [
+          "Banque Atlantique Ouest"
+        ]
       },
       "credentials": [
         {
@@ -325,7 +375,9 @@
           "temporary": false
         }
       ],
-      "realmRoles": ["BANK_AGENT"]
+      "realmRoles": [
+        "BANK_AGENT"
+      ]
     },
     {
       "username": "bank.valid",
@@ -335,8 +387,12 @@
       "enabled": true,
       "emailVerified": true,
       "attributes": {
-        "institution_id": ["b3d829b3-3f66-57bb-94b4-e8fcd5023de4"],
-        "institution_nom": ["Banque Atlantique Ouest"]
+        "institution_id": [
+          "b3d829b3-3f66-57bb-94b4-e8fcd5023de4"
+        ],
+        "institution_nom": [
+          "Banque Atlantique Ouest"
+        ]
       },
       "credentials": [
         {
@@ -345,7 +401,9 @@
           "temporary": false
         }
       ],
-      "realmRoles": ["BANK_VALID"]
+      "realmRoles": [
+        "BANK_VALID"
+      ]
     }
   ],
   "browserSecurityHeaders": {
@@ -355,7 +413,10 @@
     "contentSecurityPolicy": "frame-src 'self'; frame-ancestors 'self'; object-src 'none';"
   },
   "internationalizationEnabled": true,
-  "supportedLocales": ["fr", "en"],
+  "supportedLocales": [
+    "fr",
+    "en"
+  ],
   "defaultLocale": "fr",
   "components": {
     "org.keycloak.userprofile.UserProfileProvider": [
