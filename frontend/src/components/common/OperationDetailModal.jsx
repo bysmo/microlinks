@@ -2,10 +2,10 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   X, ArrowLeft, Clock, ArrowUpRight, ArrowDownLeft, CheckCircle2,
   XCircle, Send, Ban, RefreshCw, Building2, User, Info,
-  AlertTriangle, Check, FileText, ChevronRight, HelpCircle
+  AlertTriangle, Check, FileText, ChevronRight, HelpCircle, Download
 } from 'lucide-react';
 import StatusBadge from './StatusBadge';
-import { operationApi } from '../../services/api';
+import { operationApi, rapportApi, downloadBlob } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
@@ -23,7 +23,7 @@ const STEPS = [
 ];
 
 export default function OperationDetailModal({ isOpen, onClose, operationId, onSuccess }) {
-  const { user, hasAnyRole } = useAuth();
+  const { user, canSaisirOperation, canValiderOperation, rawRoles } = useAuth();
 
   const [op, setOp] = useState(null);
   const [historique, setHistorique] = useState([]);
@@ -98,16 +98,19 @@ export default function OperationDetailModal({ isOpen, onClose, operationId, onS
     }
   }, [op, userInstitutionId]);
 
-  // Rôles habilités pour valider / rejeter
+  // Rôles habilités pour valider / rejeter : uniquement BANK_VALID ou MESO_VALID (+ admins)
   const canValidate = useMemo(() => {
-    return isCurrentActor && hasAnyRole('AGENT_VALIDATION', 'ADMIN_INSTITUTION', 'BANK_VALID', 'MESO_VALID', 'BANK_ADMIN', 'MESO_ADMIN');
-  }, [isCurrentActor, hasAnyRole]);
+    return isCurrentActor && canValiderOperation;
+  }, [isCurrentActor, canValiderOperation]);
 
-  // Émetteur créateur (pour annuler / soumettre)
+  // Peut soumettre / annuler en brouillon : uniquement BANK_AGENT ou MESO_AGENT (+ admins)
+  const canSaisie = canSaisirOperation;
+
+  // Émetteur créateur (pour annuler / soumettre) - doit aussi avoir le rôle de saisie
   const isEmetteurCreateur = useMemo(() => {
     if (!op || !userInstitutionId) return false;
-    return String(op.institutionEmettriceId).trim() === String(userInstitutionId).trim();
-  }, [op, userInstitutionId]);
+    return String(op.institutionEmettriceId).trim() === String(userInstitutionId).trim() && canSaisie;
+  }, [op, userInstitutionId, canSaisie]);
 
   // Déterminer le prochain statut si validé
   const nextStatus = useMemo(() => {
@@ -229,6 +232,42 @@ export default function OperationDetailModal({ isOpen, onClose, operationId, onS
               {op ? op.referenceUnique : 'Chargement...'}
             </h2>
             {op && <StatusBadge status={op.statut} customLabel={op.statutLabel} />}
+            {op && !['BROUILLON', 'SOUMIS', 'REJETE_EMETTEUR', 'ANNULE'].includes(op.statut) && (
+              <div className="flex items-center gap-2 ml-4">
+                <button
+                  onClick={async () => {
+                    try {
+                      const res = await rapportApi.exportSingleMT101(op.id);
+                      downloadBlob(res.data, `MT101_${op.referenceUnique}.txt`, 'text/plain');
+                      toast.success("MT101 téléchargé avec succès !");
+                    } catch (err) {
+                      toast.error("Échec du téléchargement du MT101");
+                    }
+                  }}
+                  className="btn-secondary btn-sm flex items-center gap-1.5 text-primary-400 hover:text-primary-300 px-2.5 py-1"
+                  title="Télécharger MT101 (SWIFT)"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span className="text-xs">MT101</span>
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      const res = await rapportApi.exportSinglePain001(op.id);
+                      downloadBlob(res.data, `pain_001_${op.referenceUnique}.xml`, 'application/xml');
+                      toast.success("pain.001 téléchargé avec succès !");
+                    } catch (err) {
+                      toast.error("Échec du téléchargement du pain.001");
+                    }
+                  }}
+                  className="btn-secondary btn-sm flex items-center gap-1.5 text-emerald-400 hover:text-emerald-300 px-2.5 py-1"
+                  title="Télécharger pain.001 (ISO 20022)"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span className="text-xs">pain.001</span>
+                </button>
+              </div>
+            )}
           </div>
           <button
             onClick={onClose}
@@ -451,54 +490,94 @@ export default function OperationDetailModal({ isOpen, onClose, operationId, onS
 
                 {/* Colonne Droite : Historique des actions */}
                 <div className="space-y-6">
-                  <div className="glass-card p-5 space-y-4 h-full flex flex-col justify-between">
-                    <div>
+                  <div className="glass-card p-5 space-y-4 h-full flex flex-col">
+                    <div className="flex-1">
                       <h2 className="text-white font-semibold text-sm border-b border-white/5 pb-3 flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-primary-400" /> Historique d'Approbation
+                        <Clock className="w-4 h-4 text-primary-400" /> Historique des Validations
                       </h2>
+
+                      {/* Bannière de permission */}
+                      <div className="mt-3 mb-2 p-2.5 rounded-lg border text-xs flex items-start gap-2
+                        bg-dark-900/60 border-dark-700">
+                        <User className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-primary-400" />
+                        <div>
+                          <span className="text-dark-300">
+                            Connecté en tant que <span className="text-white font-semibold">{user?.name || user?.username}</span>
+                          </span>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {(rawRoles || []).filter(r => ['BANK_AGENT','MESO_AGENT','BANK_VALID','MESO_VALID','BANK_ADMIN','MESO_ADMIN'].includes(r)).map(r => (
+                              <span key={r} className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                r.includes('AGENT') ? 'bg-blue-500/20 text-blue-400'
+                                : r.includes('VALID') ? 'bg-emerald-500/20 text-emerald-400'
+                                : 'bg-purple-500/20 text-purple-400'
+                              }`}>{r}</span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
 
                       {historique.length === 0 ? (
                         <div className="text-center py-6 text-dark-500 text-xs">
                           Aucune action enregistrée pour le moment.
                         </div>
                       ) : (
-                        <div className="space-y-4 mt-3 overflow-y-auto max-h-[300px] custom-scrollbar pr-1">
-                          {Array.isArray(historique) && historique.map((h, index) => (
-                            <div key={h.id || index} className="relative flex gap-3 pb-2 last:pb-0">
-                              {index < historique.length - 1 && (
-                                <div className="absolute left-3 top-6 bottom-0 w-0.5 bg-dark-700" />
-                              )}
-
-                              <div className={`w-6.5 h-6.5 rounded-full border-2 flex items-center justify-center flex-shrink-0 z-10 ${h.statutApres?.startsWith('REJETE') || h.statutApres === 'ANNULE'
-                                  ? 'bg-red-500/10 border-red-500 text-red-400'
-                                  : h.statutApres === 'COMPTABILISE'
-                                    ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400'
-                                    : 'bg-primary-500/10 border-primary-500 text-primary-400'
-                                }`}>
-                                {h.statutApres?.startsWith('REJETE') || h.statutApres === 'ANNULE' ? (
-                                  <X className="w-3.5 h-3.5" />
-                                ) : (
-                                  <Check className="w-3.5 h-3.5" />
+                        <div className="space-y-3 mt-2 overflow-y-auto max-h-[320px] custom-scrollbar pr-1">
+                          {Array.isArray(historique) && historique.map((h, index) => {
+                            const isReject = h.statutApres?.startsWith('REJETE') || h.statutApres === 'ANNULE';
+                            const isSuccess = h.statutApres === 'COMPTABILISE';
+                            const dotCls = isReject
+                              ? 'bg-red-500/10 border-red-500 text-red-400'
+                              : isSuccess
+                                ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400'
+                                : 'bg-primary-500/10 border-primary-500 text-primary-400';
+                            return (
+                              <div key={h.id || index} className="relative flex gap-3">
+                                {index < historique.length - 1 && (
+                                  <div className="absolute left-[11px] top-7 bottom-0 w-0.5 bg-dark-700" />
                                 )}
+                                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 z-10 mt-0.5 ${dotCls}`}>
+                                  {isReject ? <X className="w-3 h-3" /> : <Check className="w-3 h-3" />}
+                                </div>
+                                <div className="flex-1 bg-dark-900/50 border border-dark-800 rounded-lg p-2.5 space-y-1.5">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <p className={`text-xs font-bold ${
+                                      isReject ? 'text-red-400' : isSuccess ? 'text-emerald-400' : 'text-white'
+                                    }`}>
+                                      {h.statutApres
+                                        ? STEPS.find(s => s.key === h.statutApres)?.label || h.statutApres
+                                        : 'Action'}
+                                    </p>
+                                    {h.dateAction && (
+                                      <span className="text-[10px] text-dark-500 whitespace-nowrap font-mono">
+                                        {format(new Date(h.dateAction), 'dd/MM/yy')}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-1.5">
+                                    <div className="w-4 h-4 rounded-full bg-primary-500/20 flex items-center justify-center flex-shrink-0">
+                                      <User className="w-2.5 h-2.5 text-primary-400" />
+                                    </div>
+                                    <span className="text-white text-[11px] font-semibold truncate">
+                                      {h.acteurNom || h.acteurPrenom
+                                        ? `${h.acteurPrenom || ''} ${h.acteurNom || ''}`.trim()
+                                        : h.acteurUsername || h.acteurId || 'Système'}
+                                    </span>
+                                  </div>
+                                  {h.dateAction && (
+                                    <div className="flex items-center gap-1 text-[10px] text-dark-400">
+                                      <Clock className="w-3 h-3" />
+                                      <span>{format(new Date(h.dateAction), "dd MMM yyyy 'à' HH:mm:ss", { locale: fr })}</span>
+                                    </div>
+                                  )}
+                                  {h.commentaire && (
+                                    <p className="bg-dark-950/60 text-dark-300 text-[10px] italic px-2 py-1.5 rounded border border-dark-800 leading-relaxed">
+                                      &ldquo;{h.commentaire}&rdquo;
+                                    </p>
+                                  )}
+                                </div>
                               </div>
-
-                              <div className="space-y-1 min-w-0">
-                                <p className="text-white text-xs font-semibold">
-                                  {h.statutApres ? (
-                                    STEPS.find(s => s.key === h.statutApres)?.label || h.statutApres
-                                  ) : 'Action'}
-                                </p>
-                                <p className="text-dark-400 text-[10px]">
-                                  Par <span className="text-white">{h.acteurNom || h.acteurId || 'Système'}</span> ({h.dateAction ? format(new Date(h.dateAction), 'dd/MM/yy HH:mm') : '—'})
-                                </p>
-                                {h.commentaire && (
-                                  <p className="bg-dark-900/60 text-dark-300 text-xs italic px-2 py-1 rounded border border-dark-800 mt-1 max-w-full truncate whitespace-normal">
-                                    "{h.commentaire}"
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       )}
                     </div>
@@ -508,6 +587,19 @@ export default function OperationDetailModal({ isOpen, onClose, operationId, onS
                       <span className="text-dark-400 text-[10px] uppercase font-bold tracking-wider block">
                         Actions disponibles
                       </span>
+
+                      {/* Messages de restriction de profil */}
+                      {!canSaisie && !canValidate && !isEmetteurCreateur && (
+                        <div className="p-3 rounded-lg bg-dark-900/60 border border-dark-800 text-xs text-dark-400 flex items-start gap-2">
+                          <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-amber-400 font-semibold">Accès limité</p>
+                            <p className="mt-0.5">Votre profil ne vous permet pas d'effectuer d'actions sur les opérations.
+                              Seuls les profils <span className="text-white">BANK_AGENT / MESO_AGENT</span> peuvent saisir,
+                              et <span className="text-white">BANK_VALID / MESO_VALID</span> peuvent valider.</p>
+                          </div>
+                        </div>
+                      )}
 
                       {op.statut === 'BROUILLON' && isEmetteurCreateur && (
                         <div className="flex gap-2">
@@ -552,9 +644,15 @@ export default function OperationDetailModal({ isOpen, onClose, operationId, onS
                         </div>
                       )}
 
-                      {!canValidate && !(op.statut === 'BROUILLON' && isEmetteurCreateur) && !(op.statut === 'SOUMIS' && isEmetteurCreateur) && (
+                      {canSaisie && !canValidate && !isEmetteurCreateur && op.statut !== 'BROUILLON' && op.statut !== 'SOUMIS' && (
                         <p className="text-dark-500 text-xs italic text-center py-2 bg-dark-900/30 rounded border border-dark-800/50">
                           Aucune action requise de votre part à cette étape.
+                        </p>
+                      )}
+
+                      {!canSaisie && canValidate && !isCurrentActor && (
+                        <p className="text-dark-500 text-xs italic text-center py-2 bg-dark-900/30 rounded border border-dark-800/50">
+                          En attente de traitement par votre institution à une étape différente.
                         </p>
                       )}
                     </div>

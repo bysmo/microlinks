@@ -19,4 +19,6 @@ public class OperationSearchRequest {
     private LocalDate dateDebut;
     private LocalDate dateFin;
     private String devise;
+    private Boolean excludeTerminal;
+    private Boolean onlyTerminal;
 }

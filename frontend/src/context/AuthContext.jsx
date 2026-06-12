@@ -31,6 +31,7 @@ export function AuthProvider({ children }) {
   const [isLoading, setIsLoading] = useState(true);
   const [authError, setAuthError] = useState(null);
   const [roles, setRoles] = useState([]);
+  const [rawRoles, setRawRoles] = useState([]); // Rôles Keycloak bruts (BANK_AGENT, MESO_VALID, etc.)
   const isInitialized = useRef(false);
 
   useEffect(() => {
@@ -48,6 +49,7 @@ export function AuthProvider({ children }) {
         const tokenParsed = keycloak.tokenParsed;
         const realmRoles = tokenParsed?.realm_access?.roles || [];
         const normalizedRoles = normalizeRoles(realmRoles);
+        setRawRoles(realmRoles);
 
         console.log('KEYCLOAK TOKEN PARSED:', tokenParsed);
 
@@ -135,15 +137,28 @@ export function AuthProvider({ children }) {
 
   const logout = () => keycloak.logout();
 
-  const hasRole = (role) => roles.includes(role);
+  const hasRole = (role) => roles.includes(role) || rawRoles.includes(role);
 
   const hasAnyRole = (...requiredRoles) =>
-    requiredRoles.some(role => roles.includes(role));
+    requiredRoles.some(role => roles.includes(role) || rawRoles.includes(role));
+
+  // Vérifie si l'user a EXACTEMENT un des rôles bruts Keycloak (BANK_AGENT, MESO_AGENT, BANK_VALID, MESO_VALID, etc.)
+  const hasRawRole = (...requiredRoles) =>
+    requiredRoles.some(role => rawRoles.includes(role));
+
+  // Peut saisir des opérations : uniquement MESO_AGENT ou BANK_AGENT
+  const canSaisirOperation = rawRoles.includes('MESO_AGENT') || rawRoles.includes('BANK_AGENT')
+    || rawRoles.includes('MESO_ADMIN') || rawRoles.includes('BANK_ADMIN');
+
+  // Peut valider des opérations : uniquement MESO_VALID ou BANK_VALID
+  const canValiderOperation = rawRoles.includes('MESO_VALID') || rawRoles.includes('BANK_VALID')
+    || rawRoles.includes('MESO_ADMIN') || rawRoles.includes('BANK_ADMIN');
 
   return (
     <AuthContext.Provider value={{
-      isAuthenticated, user, token, roles,
-      isLoading, authError, logout, hasRole, hasAnyRole, keycloak
+      isAuthenticated, user, token, roles, rawRoles,
+      isLoading, authError, logout, hasRole, hasAnyRole, hasRawRole,
+      canSaisirOperation, canValiderOperation, keycloak
     }}>
       {children}
     </AuthContext.Provider>

@@ -42,6 +42,8 @@ public class OperationController {
             @RequestParam(required = false) String dateDebut,
             @RequestParam(required = false) String dateFin,
             @RequestParam(required = false) String devise,
+            @RequestParam(required = false) Boolean excludeTerminal,
+            @RequestParam(required = false) Boolean onlyTerminal,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @AuthenticationPrincipal Jwt jwt) {
@@ -67,6 +69,8 @@ public class OperationController {
             req.setInstitutionId(userInstId);
         }
         req.setDevise(devise);
+        req.setExcludeTerminal(excludeTerminal);
+        req.setOnlyTerminal(onlyTerminal);
         if (dateDebut != null) req.setDateDebut(java.time.LocalDate.parse(dateDebut));
         if (dateFin != null) req.setDateFin(java.time.LocalDate.parse(dateFin));
 

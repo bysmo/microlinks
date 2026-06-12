@@ -3,19 +3,19 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Clock, ArrowUpRight, ArrowDownLeft, Eye, CheckCircle2, 
   XCircle, Send, Ban, RefreshCw, Search, Filter, Plus,
-  Building2, ChevronDown, Check, X
+  Building2, ChevronDown, Check, X, Download, FileText
 } from 'lucide-react';
 import DataTable from '../../components/common/DataTable';
 import StatusBadge from '../../components/common/StatusBadge';
 import NouvelleOperationModal from '../../components/common/NouvelleOperationModal';
 import OperationDetailModal from '../../components/common/OperationDetailModal';
-import { operationApi, institutionApi } from '../../services/api';
+import { operationApi, institutionApi, rapportApi, downloadBlob } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 
 export default function OperationsDuJourPage() {
   const navigate = useNavigate();
-  const { user, hasAnyRole } = useAuth();
+  const { user, hasAnyRole, canSaisirOperation, canValiderOperation } = useAuth();
   
   const [data, setData] = useState([]);
   const [totalElements, setTotalElements] = useState(0);
@@ -64,8 +64,7 @@ export default function OperationsDuJourPage() {
       const params = {
         page, 
         size: pageSize,
-        dateDebut: todayStr,
-        dateFin: todayStr,
+        excludeTerminal: true,
         ...(searchQuery && { search: searchQuery }),
         ...(typeFilter && { typeOperation: typeFilter }),
         ...(statutFilter && { statut: statutFilter }),
@@ -95,7 +94,7 @@ export default function OperationsDuJourPage() {
     }
   }, [page, pageSize, fluxTab, typeFilter, statutFilter, searchQuery, deviseFilter,
       institutionEmettriceFilter, institutionBeneficiaireFilter, 
-      banqueEmettriceFilter, banqueReceptriceFilter, todayStr, user]);
+      banqueEmettriceFilter, banqueReceptriceFilter, user]);
 
   useEffect(() => {
     fetchData();
@@ -174,9 +173,11 @@ export default function OperationsDuJourPage() {
     const isCorrespondentEmitter = op.banqueCorrespondanteEmettriceId === myId;
     const isCorrespondentReceiver = op.banqueCorrespondanteReceptriceId === myId;
 
-    // Supports both normalized roles and original Keycloak roles
-    const canSaisie = hasAnyRole('AGENT_SAISIE', 'ADMIN_INSTITUTION', 'BANK_AGENT', 'MESO_AGENT', 'BANK_ADMIN', 'MESO_ADMIN');
-    const canValidate = hasAnyRole('AGENT_VALIDATION', 'ADMIN_INSTITUTION', 'BANK_VALID', 'MESO_VALID', 'BANK_ADMIN', 'MESO_ADMIN');
+    // Supporte les rôles normalisés et bruts Keycloak
+    // Saisie : MESO_AGENT ou BANK_AGENT (et admins)
+    // Validation : MESO_VALID ou BANK_VALID (et admins)
+    const canSaisie = canSaisirOperation;
+    const canValidate = canValiderOperation;
 
     const actions = [];
 
@@ -377,6 +378,7 @@ export default function OperationsDuJourPage() {
       id: 'actions',
       cell: ({ row }) => {
         const rowActions = getRowActions(row.original);
+        const isEmetteurValidated = !['BROUILLON', 'SOUMIS', 'REJETE_EMETTEUR', 'ANNULE'].includes(row.original.statut);
         return (
           <div className="flex items-center gap-1.5 justify-end">
             <button
@@ -386,6 +388,42 @@ export default function OperationsDuJourPage() {
             >
               <Eye className="w-4 h-4" />
             </button>
+            {isEmetteurValidated && (
+              <>
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    try {
+                      const res = await rapportApi.exportSingleMT101(row.original.id);
+                      downloadBlob(res.data, `MT101_${row.original.referenceUnique}.txt`, 'text/plain');
+                      toast.success("MT101 téléchargé avec succès !");
+                    } catch (err) {
+                      toast.error("Échec du téléchargement du MT101");
+                    }
+                  }}
+                  className="btn-ghost btn-sm p-1.5 text-primary-400 hover:text-primary-300"
+                  title="Télécharger MT101 (SWIFT)"
+                >
+                  <FileText className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    try {
+                      const res = await rapportApi.exportSinglePain001(row.original.id);
+                      downloadBlob(res.data, `pain_001_${row.original.referenceUnique}.xml`, 'application/xml');
+                      toast.success("pain.001 téléchargé avec succès !");
+                    } catch (err) {
+                      toast.error("Échec du téléchargement du pain.001");
+                    }
+                  }}
+                  className="btn-ghost btn-sm p-1.5 text-emerald-400 hover:text-emerald-300"
+                  title="Télécharger pain.001 (ISO 20022)"
+                >
+                  <Download className="w-4 h-4" />
+                </button>
+              </>
+            )}
             {rowActions.map((action, idx) => {
               const Icon = action.icon;
               return (
@@ -403,15 +441,12 @@ export default function OperationsDuJourPage() {
           </div>
         );
       },
-      size: 160,
+      size: 200,
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   ], [navigate, actionLoading, user, setSelectedOperationId, setShowDetailModal]);
 
-  const canCreateOperation = hasAnyRole(
-    'AGENT_SAISIE', 'ADMIN_INSTITUTION',
-    'BANK_AGENT', 'MESO_AGENT', 'BANK_ADMIN', 'MESO_ADMIN'
-  );
+  const canCreateOperation = canSaisirOperation;
 
   const selectCls = 'w-full bg-dark-800/60 border border-dark-600 rounded-lg px-3 py-2 text-white text-sm appearance-none focus:outline-none focus:border-primary-500/60 focus:ring-1 focus:ring-primary-500/30 transition-all';
 
@@ -425,7 +460,7 @@ export default function OperationsDuJourPage() {
             Opérations du Jour
           </h1>
           <p className="text-dark-400 text-sm mt-0.5">
-            Suivi en temps réel des transactions compensées et saisies aujourd'hui ({new Date().toLocaleDateString('fr-FR')}).
+            Suivi en temps réel des transactions actives en cours de traitement.
           </p>
         </div>
         <div className="flex items-center gap-2">

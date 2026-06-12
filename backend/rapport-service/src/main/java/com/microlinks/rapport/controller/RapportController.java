@@ -29,10 +29,14 @@ public class RapportController {
     private final ExcelExportService excelService;
     private final MT940ExportService mt940Service;
     private final CAMT053ExportService camt053Service;
+    private final MT101Pain001ExportService mt101Pain001Service;
     private final WebClient.Builder webClientBuilder;
 
     @Value("${services.operation.url:http://operation-service:8083}")
     private String operationServiceUrl;
+
+    @Value("${services.institution.url:http://institution-service:8082}")
+    private String institutionServiceUrl;
 
     @GetMapping("/export/excel")
     @Operation(summary = "Exporter les opérations en Excel (.xlsx)")
@@ -178,5 +182,115 @@ public class RapportController {
     private String s(Map<String, Object> m, String k) {
         Object v = m.get(k);
         return v != null ? v.toString() : "";
+    }
+
+    @GetMapping("/operations/{id}/mt101")
+    @Operation(summary = "Générer le message MT101 pour une opération validée")
+    public ResponseEntity<?> exportMT101(
+            @PathVariable String id,
+            @AuthenticationPrincipal Jwt jwt) {
+        try {
+            Map<String, Object> operation = fetchOperationById(id, jwt);
+            if (operation == null) {
+                return ResponseEntity.status(404).body("Opération non trouvée");
+            }
+
+            String statut = s(operation, "statut");
+            if ("BROUILLON".equals(statut) || "SOUMIS".equals(statut) || "REJETE_EMETTEUR".equals(statut) || "ANNULE".equals(statut)) {
+                return ResponseEntity.badRequest().body("L'opération doit être validée par l'institution émettrice.");
+            }
+
+            String emetteurId = s(operation, "institutionEmettriceId");
+            String recepteurId = s(operation, "institutionBeneficiaireId");
+
+            String emetteurBic = fetchInstitutionBic(emetteurId, jwt);
+            String recepteurBic = fetchInstitutionBic(recepteurId, jwt);
+
+            byte[] data = mt101Pain001Service.generateMT101(operation, emetteurBic, recepteurBic);
+            String filename = String.format("MT101_%s.txt", s(operation, "referenceUnique"));
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                    .contentType(MediaType.TEXT_PLAIN)
+                    .body(data);
+        } catch (Exception e) {
+            log.error("Erreur génération MT101", e);
+            return ResponseEntity.internalServerError().body("Erreur lors de la génération du MT101");
+        }
+    }
+
+    @GetMapping("/operations/{id}/pain001")
+    @Operation(summary = "Générer le fichier pain.001 pour une opération validée")
+    public ResponseEntity<?> exportPain001(
+            @PathVariable String id,
+            @AuthenticationPrincipal Jwt jwt) {
+        try {
+            Map<String, Object> operation = fetchOperationById(id, jwt);
+            if (operation == null) {
+                return ResponseEntity.status(404).body("Opération non trouvée");
+            }
+
+            String statut = s(operation, "statut");
+            if ("BROUILLON".equals(statut) || "SOUMIS".equals(statut) || "REJETE_EMETTEUR".equals(statut) || "ANNULE".equals(statut)) {
+                return ResponseEntity.badRequest().body("L'opération doit être validée par l'institution émettrice.");
+            }
+
+            String emetteurId = s(operation, "institutionEmettriceId");
+            String recepteurId = s(operation, "institutionBeneficiaireId");
+
+            String emetteurBic = fetchInstitutionBic(emetteurId, jwt);
+            String recepteurBic = fetchInstitutionBic(recepteurId, jwt);
+
+            byte[] data = mt101Pain001Service.generatePain001(operation, emetteurBic, recepteurBic);
+            String filename = String.format("pain_001_%s.xml", s(operation, "referenceUnique"));
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                    .contentType(MediaType.APPLICATION_XML)
+                    .body(data);
+        } catch (Exception e) {
+            log.error("Erreur génération pain.001", e);
+            return ResponseEntity.internalServerError().body("Erreur lors de la génération du pain.001");
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> fetchOperationById(String id, Jwt jwt) {
+        try {
+            String url = operationServiceUrl + "/api/v1/operations/" + id;
+            return webClientBuilder.build()
+                    .get()
+                    .uri(url)
+                    .header("Authorization", "Bearer " + jwt.getTokenValue())
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block();
+        } catch (Exception e) {
+            log.error("Erreur récupération opération id=" + id, e);
+            return null;
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private String fetchInstitutionBic(String institutionId, Jwt jwt) {
+        if (institutionId == null || institutionId.isEmpty()) {
+            return null;
+        }
+        try {
+            String url = institutionServiceUrl + "/api/v1/institutions/" + institutionId;
+            Map<String, Object> inst = webClientBuilder.build()
+                    .get()
+                    .uri(url)
+                    .header("Authorization", "Bearer " + jwt.getTokenValue())
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block();
+            if (inst != null && inst.get("codeBic") != null) {
+                return inst.get("codeBic").toString();
+            }
+        } catch (Exception e) {
+            log.warn("Impossible de récupérer le BIC pour l'institution " + institutionId + " : " + e.getMessage());
+        }
+        return null;
     }
 }

@@ -40,6 +40,22 @@ public interface OperationRepository extends JpaRepository<Operation, UUID> {
         AND (cast(:dateDebut as date) IS NULL OR o.dateOperation >= :dateDebut)
         AND (cast(:dateFin as date) IS NULL OR o.dateOperation <= :dateFin)
         AND (cast(:devise as string) IS NULL OR o.devise = :devise)
+        AND (:excludeTerminal IS NULL OR :excludeTerminal = false OR o.statut NOT IN (
+            com.microlinks.operation.entity.StatutOperation.COMPTABILISE,
+            com.microlinks.operation.entity.StatutOperation.ANNULE,
+            com.microlinks.operation.entity.StatutOperation.REJETE,
+            com.microlinks.operation.entity.StatutOperation.REJETE_EMETTEUR,
+            com.microlinks.operation.entity.StatutOperation.REJETE_BANQUE_EMETTRICE,
+            com.microlinks.operation.entity.StatutOperation.REJETE_BANQUE_RECEPTRICE
+        ))
+        AND (:onlyTerminal IS NULL OR :onlyTerminal = false OR o.statut IN (
+            com.microlinks.operation.entity.StatutOperation.COMPTABILISE,
+            com.microlinks.operation.entity.StatutOperation.ANNULE,
+            com.microlinks.operation.entity.StatutOperation.REJETE,
+            com.microlinks.operation.entity.StatutOperation.REJETE_EMETTEUR,
+            com.microlinks.operation.entity.StatutOperation.REJETE_BANQUE_EMETTRICE,
+            com.microlinks.operation.entity.StatutOperation.REJETE_BANQUE_RECEPTRICE
+        ))
     """)
     Page<Operation> findWithFilters(
         @Param("search") String search,
@@ -53,6 +69,8 @@ public interface OperationRepository extends JpaRepository<Operation, UUID> {
         @Param("dateDebut") LocalDate dateDebut,
         @Param("dateFin") LocalDate dateFin,
         @Param("devise") String devise,
+        @Param("excludeTerminal") Boolean excludeTerminal,
+        @Param("onlyTerminal") Boolean onlyTerminal,
         Pageable pageable
     );
 

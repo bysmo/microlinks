@@ -50,6 +50,7 @@ public class OperationService {
                 req.getInstitutionId(),
                 req.getBanqueCorrespondanteEmettriceId(), req.getBanqueCorrespondanteReceptriceId(),
                 req.getDateDebut(), req.getDateFin(), req.getDevise(),
+                req.getExcludeTerminal(), req.getOnlyTerminal(),
                 pageable
         );
 

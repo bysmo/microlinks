@@ -135,6 +135,12 @@ export const rapportApi = {
   exportCAMT053: (params) => api.get('/api/v1/rapports/export/camt053', {
     params, responseType: 'blob'
   }),
+  exportSingleMT101: (id) => api.get(`/api/v1/rapports/operations/${id}/mt101`, {
+    responseType: 'blob'
+  }),
+  exportSinglePain001: (id) => api.get(`/api/v1/rapports/operations/${id}/pain001`, {
+    responseType: 'blob'
+  }),
 };
 
 // ======================== Helpers ========================

@@ -58,6 +58,7 @@ export default function OperationsListPage() {
     try {
       const params = {
         page, size: pageSize,
+        onlyTerminal: true,
         ...(filters.search && { search: filters.search }),
         ...(filters.typeOperation && { typeOperation: filters.typeOperation }),
         ...(filters.statut && { statut: filters.statut }),
