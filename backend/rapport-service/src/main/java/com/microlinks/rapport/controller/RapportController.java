@@ -18,6 +18,9 @@ import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.io.ByteArrayOutputStream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 @RestController
 @RequestMapping("/api/v1/rapports")
@@ -292,5 +295,127 @@ public class RapportController {
             log.warn("Impossible de récupérer le BIC pour l'institution " + institutionId + " : " + e.getMessage());
         }
         return null;
+    }
+
+    @PostMapping("/operations/bulk/mt101")
+    @Operation(summary = "Exporter les messages MT101 en vrac (ZIP)")
+    public ResponseEntity<?> exportBulkMT101(
+            @RequestBody List<String> ids,
+            @AuthenticationPrincipal Jwt jwt) {
+        try {
+            if (ids == null || ids.isEmpty()) {
+                return ResponseEntity.badRequest().body("La liste des identifiants ne peut pas être vide.");
+            }
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ZipOutputStream zos = new ZipOutputStream(baos);
+            int addedCount = 0;
+
+            for (String id : ids) {
+                Map<String, Object> operation = fetchOperationById(id, jwt);
+                if (operation == null) {
+                    continue;
+                }
+
+                String statut = s(operation, "statut");
+                if ("BROUILLON".equals(statut) || "SOUMIS".equals(statut) || "REJETE_EMETTEUR".equals(statut) || "ANNULE".equals(statut)) {
+                    continue;
+                }
+
+                String emetteurId = s(operation, "institutionEmettriceId");
+                String recepteurId = s(operation, "institutionBeneficiaireId");
+
+                String emetteurBic = fetchInstitutionBic(emetteurId, jwt);
+                String recepteurBic = fetchInstitutionBic(recepteurId, jwt);
+
+                byte[] data = mt101Pain001Service.generateMT101(operation, emetteurBic, recepteurBic);
+                String filename = String.format("MT101_%s.txt", s(operation, "referenceUnique"));
+
+                ZipEntry zipEntry = new ZipEntry(filename);
+                zos.putNextEntry(zipEntry);
+                zos.write(data);
+                zos.closeEntry();
+                addedCount++;
+            }
+
+            zos.close();
+
+            if (addedCount == 0) {
+                return ResponseEntity.badRequest().body("Aucune opération validée éligible pour l'export.");
+            }
+
+            byte[] zipData = baos.toByteArray();
+            String zipFilename = String.format("export_mt101_%s.zip", LocalDate.now());
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + zipFilename + "\"")
+                    .contentType(MediaType.parseMediaType("application/zip"))
+                    .body(zipData);
+
+        } catch (Exception e) {
+            log.error("Erreur lors de l'export en vrac MT101", e);
+            return ResponseEntity.internalServerError().body("Erreur lors de la génération du fichier ZIP");
+        }
+    }
+
+    @PostMapping("/operations/bulk/pain001")
+    @Operation(summary = "Exporter les fichiers pain.001 en vrac (ZIP)")
+    public ResponseEntity<?> exportBulkPain001(
+            @RequestBody List<String> ids,
+            @AuthenticationPrincipal Jwt jwt) {
+        try {
+            if (ids == null || ids.isEmpty()) {
+                return ResponseEntity.badRequest().body("La liste des identifiants ne peut pas être vide.");
+            }
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ZipOutputStream zos = new ZipOutputStream(baos);
+            int addedCount = 0;
+
+            for (String id : ids) {
+                Map<String, Object> operation = fetchOperationById(id, jwt);
+                if (operation == null) {
+                    continue;
+                }
+
+                String statut = s(operation, "statut");
+                if ("BROUILLON".equals(statut) || "SOUMIS".equals(statut) || "REJETE_EMETTEUR".equals(statut) || "ANNULE".equals(statut)) {
+                    continue;
+                }
+
+                String emetteurId = s(operation, "institutionEmettriceId");
+                String recepteurId = s(operation, "institutionBeneficiaireId");
+
+                String emetteurBic = fetchInstitutionBic(emetteurId, jwt);
+                String recepteurBic = fetchInstitutionBic(recepteurId, jwt);
+
+                byte[] data = mt101Pain001Service.generatePain001(operation, emetteurBic, recepteurBic);
+                String filename = String.format("pain_001_%s.xml", s(operation, "referenceUnique"));
+
+                ZipEntry zipEntry = new ZipEntry(filename);
+                zos.putNextEntry(zipEntry);
+                zos.write(data);
+                zos.closeEntry();
+                addedCount++;
+            }
+
+            zos.close();
+
+            if (addedCount == 0) {
+                return ResponseEntity.badRequest().body("Aucune opération validée éligible pour l'export.");
+            }
+
+            byte[] zipData = baos.toByteArray();
+            String zipFilename = String.format("export_pain001_%s.zip", LocalDate.now());
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + zipFilename + "\"")
+                    .contentType(MediaType.parseMediaType("application/zip"))
+                    .body(zipData);
+
+        } catch (Exception e) {
+            log.error("Erreur lors de l'export en vrac pain.001", e);
+            return ResponseEntity.internalServerError().body("Erreur lors de la génération du fichier ZIP");
+        }
     }
 }

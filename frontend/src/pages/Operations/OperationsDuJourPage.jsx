@@ -18,6 +18,7 @@ export default function OperationsDuJourPage() {
   const { user, hasAnyRole, canSaisirOperation, canValiderOperation } = useAuth();
   
   const [data, setData] = useState([]);
+  const [selectedIds, setSelectedIds] = useState([]);
   const [totalElements, setTotalElements] = useState(0);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
@@ -60,6 +61,7 @@ export default function OperationsDuJourPage() {
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
+    setSelectedIds([]);
     try {
       const params = {
         page, 
@@ -303,7 +305,111 @@ export default function OperationsDuJourPage() {
     return { total: data.length, emissions, receptions, pendingMe };
   }, [data, user, hasAnyRole]);
 
+  const handleBulkExportMT101 = async () => {
+    if (selectedIds.length === 0) return;
+    setIsLoading(true);
+    try {
+      const res = await rapportApi.exportBulkMT101(selectedIds);
+      downloadBlob(res.data, `export_mt101_${new Date().toISOString().split('T')[0]}.zip`, 'application/zip');
+      toast.success(`${selectedIds.length} opération(s) exportée(s) en MT101 !`);
+      setSelectedIds([]);
+    } catch (err) {
+      toast.error("Échec de l'export des fichiers MT101 en vrac.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleBulkExportPain001 = async () => {
+    if (selectedIds.length === 0) return;
+    setIsLoading(true);
+    try {
+      const res = await rapportApi.exportBulkPain001(selectedIds);
+      downloadBlob(res.data, `export_pain001_${new Date().toISOString().split('T')[0]}.zip`, 'application/zip');
+      toast.success(`${selectedIds.length} opération(s) exportée(s) en pain.001 !`);
+      setSelectedIds([]);
+    } catch (err) {
+      toast.error("Échec de l'export des fichiers pain.001 en vrac.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleToggleSelectRow = useCallback((id) => {
+    setSelectedIds(prev => {
+      if (prev.includes(id)) {
+        return prev.filter(item => item !== id);
+      } else {
+        return [...prev, id];
+      }
+    });
+  }, []);
+
+  const handleToggleAll = useCallback(() => {
+    const eligibleIds = data
+      .filter(op => !['BROUILLON', 'SOUMIS', 'REJETE_EMETTEUR', 'ANNULE'].includes(op.statut))
+      .map(op => op.id);
+    
+    if (eligibleIds.length === 0) return;
+
+    const allSelected = eligibleIds.every(id => selectedIds.includes(id));
+    if (allSelected) {
+      setSelectedIds(prev => prev.filter(id => !eligibleIds.includes(id)));
+    } else {
+      setSelectedIds(prev => {
+        const newSelection = [...prev];
+        eligibleIds.forEach(id => {
+          if (!newSelection.includes(id)) {
+            newSelection.push(id);
+          }
+        });
+        return newSelection;
+      });
+    }
+  }, [data, selectedIds]);
+
   const columns = useMemo(() => [
+    {
+      header: () => {
+        const eligibleIds = data.filter(op => !['BROUILLON', 'SOUMIS', 'REJETE_EMETTEUR', 'ANNULE'].includes(op.statut)).map(op => op.id);
+        const allSelected = eligibleIds.length > 0 && eligibleIds.every(id => selectedIds.includes(id));
+        const someSelected = eligibleIds.length > 0 && eligibleIds.some(id => selectedIds.includes(id)) && !allSelected;
+        
+        return (
+          <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
+            <input
+              type="checkbox"
+              ref={el => {
+                if (el) {
+                  el.indeterminate = someSelected;
+                }
+              }}
+              checked={allSelected}
+              onChange={handleToggleAll}
+              disabled={eligibleIds.length === 0}
+              className="rounded border-dark-600 bg-dark-800 text-primary-500 focus:ring-primary-500 focus:ring-offset-dark-900 cursor-pointer w-4 h-4"
+              title="Tout sélectionner (opérations validées non annulées)"
+            />
+          </div>
+        );
+      },
+      id: 'selection',
+      cell: ({ row }) => {
+        const isEligible = !['BROUILLON', 'SOUMIS', 'REJETE_EMETTEUR', 'ANNULE'].includes(row.original.statut);
+        return (
+          <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
+            <input
+              type="checkbox"
+              checked={selectedIds.includes(row.original.id)}
+              disabled={!isEligible}
+              onChange={() => handleToggleSelectRow(row.original.id)}
+              className="rounded border-dark-600 bg-dark-800 text-primary-500 focus:ring-primary-500 focus:ring-offset-dark-900 w-4 h-4 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+            />
+          </div>
+        );
+      },
+      size: 40,
+    },
     {
       header: 'Référence',
       accessorKey: 'referenceUnique',
@@ -444,7 +550,7 @@ export default function OperationsDuJourPage() {
       size: 200,
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  ], [navigate, actionLoading, user, setSelectedOperationId, setShowDetailModal]);
+  ], [navigate, actionLoading, user, setSelectedOperationId, setShowDetailModal, selectedIds, data, handleToggleAll, handleToggleSelectRow]);
 
   const canCreateOperation = canSaisirOperation;
 
@@ -464,6 +570,27 @@ export default function OperationsDuJourPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {selectedIds.length > 0 && (
+            <div className="flex items-center gap-2 animate-fade-in">
+              <button
+                onClick={handleBulkExportMT101}
+                className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-primary-500/25 border border-primary-500/40 hover:bg-primary-500/40 text-primary-300 transition-all flex items-center gap-2 shadow-lg shadow-primary-500/5 hover:-translate-y-0.5 active:translate-y-0"
+                id="btn-bulk-export-mt101"
+              >
+                <FileText className="w-4 h-4 text-primary-400" />
+                Exporter MT101 ({selectedIds.length})
+              </button>
+              <button
+                onClick={handleBulkExportPain001}
+                className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-500/25 border border-emerald-500/40 hover:bg-emerald-500/40 text-emerald-300 transition-all flex items-center gap-2 shadow-lg shadow-emerald-500/5 hover:-translate-y-0.5 active:translate-y-0"
+                id="btn-bulk-export-pain001"
+              >
+                <Download className="w-4 h-4 text-emerald-400" />
+                Exporter pain.001 ({selectedIds.length})
+              </button>
+              <div className="h-6 w-px bg-white/10 mx-1" />
+            </div>
+          )}
           {canCreateOperation && (
             <button 
               onClick={() => setShowNewOpModal(true)} 

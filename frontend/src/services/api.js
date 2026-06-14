@@ -141,6 +141,12 @@ export const rapportApi = {
   exportSinglePain001: (id) => api.get(`/api/v1/rapports/operations/${id}/pain001`, {
     responseType: 'blob'
   }),
+  exportBulkMT101: (ids) => api.post('/api/v1/rapports/operations/bulk/mt101', ids, {
+    responseType: 'blob'
+  }),
+  exportBulkPain001: (ids) => api.post('/api/v1/rapports/operations/bulk/pain001', ids, {
+    responseType: 'blob'
+  }),
 };
 
 // ======================== Helpers ========================
