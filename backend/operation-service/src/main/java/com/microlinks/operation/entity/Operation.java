@@ -45,8 +45,12 @@ public class Operation {
     @Column(name = "date_valeur")
     private LocalDate dateValeur;
 
+    @Convert(converter = com.microlinks.operation.config.MontantEncryptionConverter.class)
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal montant;
+
+    @Column(name = "checksum", length = 64)
+    private String checksum;
 
     @Column(nullable = false, length = 10)
     private String devise;
@@ -127,4 +131,33 @@ public class Operation {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    public String calculateChecksum() {
+        String payload = String.format("%s|%s|%s|%s|%s",
+            compteDonneurOrdre != null ? compteDonneurOrdre : "",
+            compteBeneficiaire != null ? compteBeneficiaire : "",
+            dateOperation != null ? dateOperation.toString() : "",
+            montant != null ? montant.toPlainString() : "0.00",
+            statut != null ? statut.name() : ""
+        );
+        try {
+            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] hashBytes = digest.digest(payload.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hashBytes) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) hexString.append('0');
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (Exception e) {
+            throw new RuntimeException("Error calculating checksum", e);
+        }
+    }
+
+    @PrePersist
+    @PreUpdate
+    public void updateChecksum() {
+        this.checksum = calculateChecksum();
+    }
 }

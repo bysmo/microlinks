@@ -4,6 +4,7 @@ import com.microlinks.operation.dto.*;
 import com.microlinks.operation.entity.StatutOperation;
 import com.microlinks.operation.repository.HistoriqueStatutRepository;
 import com.microlinks.operation.service.OperationService;
+import com.microlinks.operation.service.AmlService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -28,6 +29,7 @@ public class OperationController {
 
     private final OperationService operationService;
     private final HistoriqueStatutRepository historiqueRepository;
+    private final AmlService amlService;
 
     @GetMapping
     @Operation(summary = "Lister les opérations avec filtres et pagination")
@@ -161,10 +163,117 @@ public class OperationController {
         return ResponseEntity.ok(operationService.getStats(extractInstitutionId(jwt)));
     }
 
+    @GetMapping("/security/scan")
+    @PreAuthorize("hasRole('ADMIN_PLATEFORME')")
+    @Operation(summary = "Lancer un audit et scan complet de l'immuabilité et de la sécurité des données")
+    public ResponseEntity<SecurityScanResult> runSecurityScan() {
+        return ResponseEntity.ok(operationService.runSecurityScan());
+    }
+
+    @GetMapping("/aml/sanctions")
+    @Operation(summary = "Lister les sanctions AML/CFT")
+    public ResponseEntity<List<com.microlinks.operation.entity.AmlSanction>> getSanctions() {
+        return ResponseEntity.ok(amlService.getAllSanctions());
+    }
+
+    @PostMapping("/aml/sanctions/import-excel")
+    @Operation(summary = "Importer des sanctions depuis un fichier Excel")
+    public ResponseEntity<Map<String, String>> importExcel(
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+        try {
+            amlService.importSanctionsFromExcel(file.getInputStream(), file.getOriginalFilename());
+            return ResponseEntity.ok(Map.of("message", "Importation réussie"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Erreur lors de l'importation : " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/aml/sanctions/sync-web")
+    @Operation(summary = "Synchroniser la liste des sanctions avec les listes Web (ONU, OFAC...)")
+    public ResponseEntity<Map<String, String>> syncWeb(@RequestParam(required = false) String url) {
+        amlService.updateSanctionsFromWeb(url);
+        return ResponseEntity.ok(Map.of("message", "Synchronisation web réussie (ou liste de démonstration chargée)"));
+    }
+
+    @GetMapping("/aml/suspended")
+    @Operation(summary = "Lister les opérations suspendues pour motif AML/CFT")
+    public ResponseEntity<PagedResponse<OperationDto>> getSuspended(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @AuthenticationPrincipal Jwt jwt) {
+        OperationSearchRequest req = new OperationSearchRequest();
+        req.setStatut(StatutOperation.SUSPENDU_AML);
+
+        UUID userInstId = extractInstitutionId(jwt);
+        boolean isPlatformAdmin = false;
+        java.util.Map<String, Object> realmAccess = jwt.getClaimAsMap("realm_access");
+        if (realmAccess != null && realmAccess.containsKey("roles")) {
+            @SuppressWarnings("unchecked")
+            java.util.List<String> roles = (java.util.List<String>) realmAccess.get("roles");
+            isPlatformAdmin = roles.contains("ADMIN_PLATEFORME");
+        }
+        if (!isPlatformAdmin) {
+            req.setInstitutionId(userInstId);
+        }
+
+        return ResponseEntity.ok(operationService.findAll(req, page, size));
+    }
+
+    @PostMapping("/aml/{id}/decision")
+    @Operation(summary = "Prendre une décision de conformité sur une opération suspendue")
+    @PreAuthorize("hasAnyRole('AGENT_VALIDATION', 'ADMIN_INSTITUTION', 'ADMIN_PLATEFORME')")
+    public ResponseEntity<OperationDto> decideAml(
+            @PathVariable UUID id,
+            @RequestBody Map<String, String> body,
+            @AuthenticationPrincipal Jwt jwt) {
+        String decision = body.get("decision");
+        String commentaire = body.get("commentaire");
+        return ResponseEntity.ok(operationService.decideAml(id, decision, commentaire,
+                jwt.getSubject(), jwt.getClaimAsString("name"), extractInstitutionId(jwt)));
+    }
+
+    @GetMapping("/aml/sources")
+    @Operation(summary = "Lister les sources de sanctions configurées")
+    public ResponseEntity<List<com.microlinks.operation.entity.AmlSource>> getSources() {
+        return ResponseEntity.ok(amlService.getAllSources());
+    }
+
+    @PostMapping("/aml/sources")
+    @Operation(summary = "Créer une source de sanctions")
+    @PreAuthorize("hasAnyRole('ADMIN_PLATEFORME', 'ADMIN_INSTITUTION')")
+    public ResponseEntity<com.microlinks.operation.entity.AmlSource> saveSource(
+            @RequestBody com.microlinks.operation.entity.AmlSource source) {
+        return ResponseEntity.ok(amlService.saveSource(source));
+    }
+
+    @PutMapping("/aml/sources/{id}")
+    @Operation(summary = "Mettre à jour une source de sanctions")
+    @PreAuthorize("hasAnyRole('ADMIN_PLATEFORME', 'ADMIN_INSTITUTION')")
+    public ResponseEntity<com.microlinks.operation.entity.AmlSource> updateSource(
+            @PathVariable UUID id,
+            @RequestBody com.microlinks.operation.entity.AmlSource source) {
+        source.setId(id);
+        return ResponseEntity.ok(amlService.saveSource(source));
+    }
+
+    @DeleteMapping("/aml/sources/{id}")
+    @Operation(summary = "Supprimer une source de sanctions")
+    @PreAuthorize("hasAnyRole('ADMIN_PLATEFORME', 'ADMIN_INSTITUTION')")
+    public ResponseEntity<Map<String, String>> deleteSource(@PathVariable UUID id) {
+        amlService.deleteSource(id);
+        return ResponseEntity.ok(Map.of("message", "Source supprimée avec succès"));
+    }
+
+
     private UUID extractInstitutionId(Jwt jwt) {
         String institutionId = jwt.getClaimAsString("institution_id");
         if (institutionId != null) {
             try { return UUID.fromString(institutionId); } catch (Exception ignored) {}
+        }
+        java.util.List<String> instIds = jwt.getClaimAsStringList("institution_id");
+        if (instIds != null && !instIds.isEmpty()) {
+            try { return UUID.fromString(instIds.get(0)); } catch (Exception ignored) {}
         }
         return null;
     }

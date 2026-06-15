@@ -48,6 +48,10 @@ public class DataInitializer implements ApplicationRunner {
          * Liste des banques de la zone BCEAO (UEMOA) à initialiser.
          */
         private static final List<BankSeed> BANKS = List.of(
+                        // Banques Centrales
+                        new BankSeed("BCAO", "BCEAO", "Banque Centrale des États de l'Afrique de l'Ouest", "SN", "00001", "RTGS-BCAO-SN", TypeInstitution.BANQUE),
+                        new BankSeed("BEAC", "BEAC", "Banque des États de l'Afrique Centrale", "CM", "00002", "RTGS-BEAC-CM", TypeInstitution.BANQUE),
+
                         // Filiales Coris Bank
                         new BankSeed("CORIBFBF", "Coris Burkina", "CORIS BANK BURKINA FASO", "BF", "BF148", "C00030148",
                                         TypeInstitution.BANQUE),
@@ -181,47 +185,58 @@ public class DataInitializer implements ApplicationRunner {
                         }
                 }
 
-                if (zonesCreated > 0 || banksCreated > 0) {
-                        log.info("Initialisation de référence terminée. Zones créées: {}, Banques créées: {}.",
-                                        zonesCreated, banksCreated);
+                // 4. Initialiser les microfinances/mésofinances (y compris CMFBF)
+                int microfinancesCreated = 0;
+                for (MicrofinanceSeed seed : MICROFINANCES) {
+                        if (!institutionRepository.existsByCode(seed.code())) {
+                                UUID generatedId = UUID.nameUUIDFromBytes(("ML-MICRO-" + seed.code()).getBytes());
+                                if (institutionRepository.existsById(generatedId)) {
+                                        generatedId = UUID.randomUUID();
+                                }
+
+                                Institution correspondent = null;
+                                if (seed.banqueCorrespondanteCode() != null) {
+                                        correspondent = institutionRepository.findByCode(seed.banqueCorrespondanteCode()).orElse(null);
+                                }
+
+                                ZoneMonetaire zone = bceao;
+                                if (seed.code().contains("-CM") || "CEMAC".equals(seed.banqueCorrespondanteCode())) {
+                                        zone = zoneMonetaireRepository.findByCode("BEAC").orElse(bceao);
+                                }
+
+                                Institution inst = Institution.builder()
+                                                .id(generatedId)
+                                                .code(seed.code())
+                                                .sigle(seed.name())
+                                                .nom(seed.fullName())
+                                                .pays(seed.country())
+                                                .typeInstitution(seed.type())
+                                                .zoneMonetaire(zone)
+                                                .banqueCorrespondante(correspondent)
+                                                .statut(seed.status())
+                                                .dateAdhesion(seed.dateAdhesion())
+                                                .codeMicrolink(seed.codeMicrolink())
+                                                .adresse(seed.address())
+                                                .telephone(seed.phone())
+                                                .email(seed.email())
+                                                .siteWeb(seed.web())
+                                                .createdBy("system")
+                                                .updatedBy("system")
+                                                .build();
+
+                                institutionRepository.save(inst);
+                                microfinancesCreated++;
+                                log.info("Institution de référence créée : {} - {} ({})", seed.code(), seed.fullName(), seed.country());
+                        }
+                }
+
+                if (zonesCreated > 0 || banksCreated > 0 || microfinancesCreated > 0) {
+                        log.info("Initialisation de référence terminée. Zones créées: {}, Banques créées: {}, Microfinances créées: {}.",
+                                        zonesCreated, banksCreated, microfinancesCreated);
                 } else {
-                        log.info("Référentiels (zones et banques) déjà à jour. Aucune action requise.");
+                        log.info("Référentiels (zones, banques, microfinances) déjà à jour. Aucune action requise.");
                 }
         }
-
-        /*
-         * private void seedDefaultInstitution(UUID id, String code, String sigle,
-         * String nom, String country,
-         * String countryCode, String bic, String rtgsCode,
-         * TypeInstitution type, ZoneMonetaire zone) {
-         * if (institutionRepository.findById(id).isEmpty() &&
-         * !institutionRepository.existsByCode(code)) {
-         * String cleanName = sigle.toLowerCase().replaceAll("\\s+", "");
-         * Institution inst = Institution.builder()
-         * .id(id)
-         * .code(code)
-         * .sigle(sigle)
-         * .nom(nom)
-         * .pays(country)
-         * .typeInstitution(type)
-         * .zoneMonetaire(zone)
-         * .codeBanqueRegional(countryCode)
-         * .codeBic(bic)
-         * .codeParticipantRtgs(rtgsCode)
-         * .statut(StatutEntite.ACTIF)
-         * .dateAdhesion(LocalDate.of(2024, 1, 1))
-         * .adresse("Abidjan, Côte d'Ivoire")
-         * .telephone("+225 27 20 00 00")
-         * .email("info@" + cleanName + ".com")
-         * .siteWeb("www." + cleanName + ".com")
-         * .createdBy("system")
-         * .updatedBy("system")
-         * .build();
-         * institutionRepository.save(inst);
-         * log.info("Institution par défaut créée : {} - {}", code, nom);
-         * }
-         * }
-         */
 
         private record ZoneSeed(String code, String libelle, String devise, String description) {
         }
@@ -229,4 +244,39 @@ public class DataInitializer implements ApplicationRunner {
         private record BankSeed(String bic, String name, String fullName, String country, String countryCode,
                         String rtgsCode, TypeInstitution type) {
         }
+
+        private record MicrofinanceSeed(
+                String code, String name, String fullName, String country,
+                String address, String phone, String email, String web,
+                StatutEntite status, LocalDate dateAdhesion, String codeMicrolink,
+                String banqueCorrespondanteCode, TypeInstitution type
+        ) {}
+
+        private static final List<MicrofinanceSeed> MICROFINANCES = List.of(
+                new MicrofinanceSeed(
+                        "CREDIT-MUTUEL-SN", "CMS", "Crédit Mutuel du Sénégal", "SN",
+                        "12 Avenue Léopold Sédar Senghor, Dakar", "+221 33 823 10 10", "contact@cms.sn", "https://www.cms.sn",
+                        StatutEntite.ACTIF, LocalDate.of(1988, 1, 1), "ML-SN-0001", "BCAO", TypeInstitution.MICRO_FINANCE
+                ),
+                new MicrofinanceSeed(
+                        "ACEP-CM", "ACEP", "ACEP Cameroun S.A.", "CM",
+                        "Rue de l'Hôtel de Ville, Douala", "+237 233 43 85 00", "contact@acep-cameroun.com", "https://www.acep-cameroun.com",
+                        StatutEntite.INACTIF, LocalDate.of(1999, 5, 12), "ML-CM-0001", "BEAC", TypeInstitution.MICRO_FINANCE
+                ),
+                new MicrofinanceSeed(
+                        "COMECI-CI", "COMECI", "COopec MEssagerie et CIgarette", "CI",
+                        "Abidjan, rue des banques", "+225 27 21 23 45 67", "contact@comeci.ci", "https://www.comeci.ci",
+                        StatutEntite.SUSPENDU, LocalDate.of(2005, 8, 20), "ML-CI-0001", "BCAO", TypeInstitution.MICRO_FINANCE
+                ),
+                new MicrofinanceSeed(
+                        "COFINA-SN", "COFINA", "Compagnie Financière Africaine", "SN",
+                        "Sacré Cœur 3, Villa 9288, Dakar", "+221 33 869 99 99", "contact.senegal@cofinacorp.com", "https://www.cofinacorp.com",
+                        StatutEntite.ACTIF, LocalDate.of(2013, 1, 1), "ML-SN-0002", "BCAO", TypeInstitution.MESO_FINANCE
+                ),
+                new MicrofinanceSeed(
+                        "CMFBF", "CMFBF", "Crédit Mutuel du Burkina Faso", "BF",
+                        "Ouagadougou, Burkina Faso", "+226 25 30 00 00", "contact@cmfbf.com", "https://www.cmfbf.com",
+                        StatutEntite.ACTIF, LocalDate.of(2020, 1, 1), "ML-BF-0001", "CORIBFBF", TypeInstitution.MICRO_FINANCE
+                )
+        );
 }

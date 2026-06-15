@@ -14,7 +14,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
@@ -23,6 +23,9 @@ spring:
 
   liquibase:
     change-log: classpath:db/changelog/master.xml
+  sql:
+    init:
+      mode: never
 
   data:
     redis:

@@ -46,7 +46,8 @@ public interface OperationRepository extends JpaRepository<Operation, UUID> {
             com.microlinks.operation.entity.StatutOperation.REJETE,
             com.microlinks.operation.entity.StatutOperation.REJETE_EMETTEUR,
             com.microlinks.operation.entity.StatutOperation.REJETE_BANQUE_EMETTRICE,
-            com.microlinks.operation.entity.StatutOperation.REJETE_BANQUE_RECEPTRICE
+            com.microlinks.operation.entity.StatutOperation.REJETE_BANQUE_RECEPTRICE,
+            com.microlinks.operation.entity.StatutOperation.REJETE_AML
         ))
         AND (:onlyTerminal IS NULL OR :onlyTerminal = false OR o.statut IN (
             com.microlinks.operation.entity.StatutOperation.COMPTABILISE,
@@ -54,7 +55,8 @@ public interface OperationRepository extends JpaRepository<Operation, UUID> {
             com.microlinks.operation.entity.StatutOperation.REJETE,
             com.microlinks.operation.entity.StatutOperation.REJETE_EMETTEUR,
             com.microlinks.operation.entity.StatutOperation.REJETE_BANQUE_EMETTRICE,
-            com.microlinks.operation.entity.StatutOperation.REJETE_BANQUE_RECEPTRICE
+            com.microlinks.operation.entity.StatutOperation.REJETE_BANQUE_RECEPTRICE,
+            com.microlinks.operation.entity.StatutOperation.REJETE_AML
         ))
     """)
     Page<Operation> findWithFilters(

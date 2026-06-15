@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="op-005-create-aml-tables" author="microlinks">
+        <createTable tableName="aml_sanctions">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="nom" type="VARCHAR(200)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="category" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="source" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="date_ajout" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="details" type="TEXT"/>
+        </createTable>
+
+        <createIndex indexName="idx_aml_nom" tableName="aml_sanctions">
+            <column name="nom"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

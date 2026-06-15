@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Building2,
   CheckSquare, FileBarChart2, Settings, ChevronLeft,
   ChevronRight, LogOut, Link as LinkIcon,
-  Receipt, FileText, Clock
+  Receipt, FileText, Clock, Shield, ShieldAlert
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -71,6 +71,20 @@ const menuItems = [
     icon: Settings,
     path: '/administration',
     roles: ['ADMIN_PLATEFORME'],
+  },
+  {
+    id: 'security',
+    label: 'Sécurité',
+    icon: Shield,
+    path: '/security',
+    roles: ['ADMIN_PLATEFORME'],
+  },
+  {
+    id: 'aml',
+    label: 'AML / Conformité',
+    icon: ShieldAlert,
+    path: '/aml',
+    roles: ['ADMIN_PLATEFORME', 'ADMIN_INSTITUTION', 'AGENT_VALIDATION'],
   },
 ];
 

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="op-004-add-security-columns" author="microlinks">
+        <!-- Convert montant column from DECIMAL to VARCHAR to hold encrypted data -->
+        <modifyDataType tableName="operations" columnName="montant" newDataType="VARCHAR(255)"/>
+        
+        <!-- Add checksum column to operations -->
+        <addColumn tableName="operations">
+            <column name="checksum" type="VARCHAR(64)"/>
+        </addColumn>
+
+        <!-- Add cryptographic hash and previous_hash to historique_statuts -->
+        <addColumn tableName="historique_statuts">
+            <column name="hash" type="VARCHAR(64)"/>
+            <column name="previous_hash" type="VARCHAR(64)"/>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

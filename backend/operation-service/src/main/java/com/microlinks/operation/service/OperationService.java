@@ -32,6 +32,7 @@ public class OperationService {
     private final HistoriqueStatutRepository historiqueRepository;
     private final OperationWorkflowMachine workflowMachine;
     private final RabbitTemplate rabbitTemplate;
+    private final AmlService amlService;
 
     @Value("${microlinks.rabbitmq.exchange}")
     private String exchange;
@@ -113,13 +114,49 @@ public class OperationService {
 
     @Transactional
     public OperationDto soumettre(UUID id, String commentaire, String userId, String userName, UUID institutionId) {
+        Operation op = getOperationById(id);
+
+        // Automated AML screening of sender and beneficiary names
+        boolean match = amlService.checkSanctionMatch(op.getNomDonneurOrdre())
+                     || amlService.checkSanctionMatch(op.getNomBeneficiaire());
+
+        if (match) {
+            log.warn("[AML Block] Match detected during submission of operation {}. Freezing transaction.", op.getReferenceUnique());
+            return changerStatut(id, StatutOperation.SUSPENDU_AML,
+                    "[Alerte AML/CFT] Correspondance détectée dans les listes de sanctions. Opération suspendue.",
+                    userId, userName, institutionId);
+        }
+
         return changerStatut(id, StatutOperation.SOUMIS, commentaire, userId, userName, institutionId);
+    }
+
+    @Transactional
+    public OperationDto decideAml(UUID id, String decision, String commentaire, String userId, String userName, UUID institutionId) {
+        Operation op = getOperationById(id);
+        if (op.getStatut() != StatutOperation.SUSPENDU_AML) {
+            throw new WorkflowException("L'opération n'est pas suspendue pour vérification AML/CFT");
+        }
+
+        StatutOperation nouveauStatut;
+        if ("APPROUVER".equalsIgnoreCase(decision) || "RELEASE".equalsIgnoreCase(decision)) {
+            nouveauStatut = StatutOperation.SOUMIS;
+        } else if ("REJETER".equalsIgnoreCase(decision) || "REJECT".equalsIgnoreCase(decision)) {
+            nouveauStatut = StatutOperation.REJETE_AML;
+        } else {
+            throw new IllegalArgumentException("Décision AML non reconnue : " + decision);
+        }
+
+        return changerStatut(id, nouveauStatut, commentaire, userId, userName, institutionId);
     }
 
     @Transactional
     public OperationDto valider(UUID id, StatutOperation nouveauStatut, String commentaire,
                                  String userId, String userName, UUID institutionId) {
         Operation op = getOperationById(id);
+
+        if (op.getCreePar().equals(userId)) {
+            throw new WorkflowException("Le créateur de l'opération ne peut pas la valider (Principe des Quatre Yeux)");
+        }
 
         // Vérification que l'institution est bien celle attendue dans le workflow
         validateActeur(op, nouveauStatut, institutionId);
@@ -130,6 +167,11 @@ public class OperationService {
     @Transactional
     public OperationDto rejeter(UUID id, String motifRejet, String userId, String userName, UUID institutionId) {
         Operation op = getOperationById(id);
+        
+        if (op.getCreePar().equals(userId)) {
+            throw new WorkflowException("Le créateur de l'opération ne peut pas la rejeter (Principe des Quatre Yeux)");
+        }
+
         StatutOperation statutRejet = getStatutRejet(op.getStatut());
 
         op.setCommentaireRejet(motifRejet);
@@ -207,6 +249,11 @@ public class OperationService {
 
     private void addHistorique(Operation op, StatutOperation avant, StatutOperation apres,
                                 String commentaire, String acteurId, String acteurNom, UUID institutionId) {
+        HistoriqueStatut lastHist = historiqueRepository.findFirstByOrderByDateActionDesc();
+        String prevHash = (lastHist != null && lastHist.getHash() != null) 
+            ? lastHist.getHash() 
+            : "0000000000000000000000000000000000000000000000000000000000000000";
+
         HistoriqueStatut hist = HistoriqueStatut.builder()
                 .operation(op)
                 .statutAvant(avant)
@@ -216,7 +263,10 @@ public class OperationService {
                 .acteurNom(acteurNom)
                 .institutionId(institutionId)
                 .dateAction(LocalDateTime.now())
+                .previousHash(prevHash)
                 .build();
+        
+        hist.setHash(hist.calculateHash(prevHash));
         historiqueRepository.save(hist);
     }
 
@@ -295,6 +345,57 @@ public class OperationService {
                 .creePar(op.getCreePar())
                 .createdAt(op.getCreatedAt())
                 .updatedAt(op.getUpdatedAt())
+                .build();
+    }
+
+    public SecurityScanResult runSecurityScan() {
+        List<Operation> operations = operationRepository.findAll();
+        List<String> corruptedOps = new java.util.ArrayList<>();
+        
+        for (Operation op : operations) {
+            String calculated = op.calculateChecksum();
+            if (op.getChecksum() == null || !op.getChecksum().equals(calculated)) {
+                corruptedOps.add(op.getReferenceUnique() + " (ID: " + op.getId() + ")");
+            }
+        }
+
+        List<HistoriqueStatut> history = historiqueRepository.findAll(Sort.by(Sort.Direction.ASC, "dateAction"));
+        List<String> corruptedHist = new java.util.ArrayList<>();
+        
+        String expectedPrevHash = "0000000000000000000000000000000000000000000000000000000000000000";
+        for (HistoriqueStatut hist : history) {
+            // Verify previous hash link
+            if (hist.getPreviousHash() == null || !hist.getPreviousHash().equals(expectedPrevHash)) {
+                corruptedHist.add("Lien corrompu pour l'historique " + hist.getId() + " de l'opération " + 
+                    (hist.getOperation() != null ? hist.getOperation().getReferenceUnique() : "Inconnue"));
+            } else {
+                // Verify hash itself
+                String calculatedHash = hist.calculateHash(hist.getPreviousHash());
+                if (hist.getHash() == null || !hist.getHash().equals(calculatedHash)) {
+                    corruptedHist.add("Empreinte invalide pour l'historique " + hist.getId() + " de l'opération " + 
+                        (hist.getOperation() != null ? hist.getOperation().getReferenceUnique() : "Inconnue"));
+                }
+            }
+            // Move to next in chain
+            expectedPrevHash = hist.getHash() != null ? hist.getHash() : "";
+        }
+
+        int totalCorruptions = corruptedOps.size() + corruptedHist.size();
+        String status = "SECURE";
+        if (totalCorruptions >= 10) {
+            status = "CRITICAL";
+        } else if (totalCorruptions > 0) {
+            status = "WARNING";
+        }
+
+        return SecurityScanResult.builder()
+                .totalOperationsChecked(operations.size())
+                .totalHistoryLogsChecked(history.size())
+                .corruptedOperationIds(corruptedOps)
+                .corruptedHistoryLogIds(corruptedHist)
+                .totalCorruptions(totalCorruptions)
+                .status(status)
+                .scanTimestamp(LocalDateTime.now())
                 .build();
     }
 }

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, Search, Menu } from 'lucide-react';
+import { Bell, Search, Menu, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { operationApi } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../hooks/useNotifications';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 const PAGE_TITLES = {
   '/dashboard': 'Tableau de bord',
@@ -14,6 +15,7 @@ const PAGE_TITLES = {
   '/facturation': 'Facturation',
   '/mes-factures': 'Mes Factures',
   '/administration': 'Administration',
+  '/security': 'Sécurité & Immuabilité',
 };
 
 // Resolve in order of specificity (longest match wins)
@@ -24,10 +26,89 @@ function resolvePageTitle(pathname) {
 }
 
 export default function Header() {
-  const { user } = useAuth();
+  const { user, roles } = useAuth();
+  const isPlatformAdmin = roles?.includes('ADMIN_PLATEFORME');
   const location = useLocation();
+  const navigate = useNavigate();
   const { notifications, unreadCount, markAllRead } = useNotifications();
   const [showNotif, setShowNotif] = useState(false);
+
+  const [securityData, setSecurityData] = useState(() => {
+    try {
+      const saved = localStorage.getItem('microlinks_security_status');
+      return saved ? JSON.parse(saved) : { status: 'SECURE', totalCorruptions: 0 };
+    } catch {
+      return { status: 'SECURE', totalCorruptions: 0 };
+    }
+  });
+
+  const [secondsLeft, setSecondsLeft] = useState(() => {
+    const intervalMins = parseInt(localStorage.getItem('microlinks_scan_interval') || '5', 10);
+    return intervalMins * 60;
+  });
+
+  const runScan = async () => {
+    try {
+      const res = await operationApi.securityScan();
+      setSecurityData(res.data);
+      localStorage.setItem('microlinks_security_status', JSON.stringify(res.data));
+      window.dispatchEvent(new CustomEvent('security-scan-updated', { detail: res.data }));
+      
+      const intervalMins = parseInt(localStorage.getItem('microlinks_scan_interval') || '5', 10);
+      setSecondsLeft(intervalMins * 60);
+    } catch (e) {
+      console.error("Erreur lors du scan automatique", e);
+    }
+  };
+
+  useEffect(() => {
+    if (!isPlatformAdmin) return;
+    const handleUpdate = (e) => {
+      setSecurityData(e.detail);
+      const intervalMins = parseInt(localStorage.getItem('microlinks_scan_interval') || '5', 10);
+      setSecondsLeft(intervalMins * 60);
+    };
+    window.addEventListener('security-scan-updated', handleUpdate);
+
+    // Initial load
+    runScan();
+
+    return () => {
+      window.removeEventListener('security-scan-updated', handleUpdate);
+    };
+  }, [isPlatformAdmin]);
+
+  useEffect(() => {
+    if (!isPlatformAdmin) return;
+    const timer = setInterval(() => {
+      setSecondsLeft(prev => {
+        if (prev <= 1) {
+          runScan();
+          const intervalMins = parseInt(localStorage.getItem('microlinks_scan_interval') || '5', 10);
+          return intervalMins * 60;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [isPlatformAdmin]);
+
+  const formatTime = (secs) => {
+    const m = Math.floor(secs / 60).toString().padStart(2, '0');
+    const s = (secs % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
+
+  const getStatusColor = () => {
+    if (!securityData) return 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400';
+    if (securityData.status === 'CRITICAL' || securityData.totalCorruptions >= 10) {
+      return 'bg-red-500/25 border-red-500/40 text-red-300 shadow-md shadow-red-500/5 hover:bg-red-500/35';
+    }
+    if (securityData.status === 'WARNING' || (securityData.totalCorruptions > 0 && securityData.totalCorruptions < 10)) {
+      return 'bg-yellow-500/25 border-yellow-500/40 text-yellow-300 shadow-md shadow-yellow-500/5 hover:bg-yellow-500/35';
+    }
+    return 'bg-emerald-500/25 border-emerald-500/40 text-emerald-300 shadow-md shadow-emerald-500/5 hover:bg-emerald-500/35';
+  };
 
   const pageTitle = resolvePageTitle(location.pathname);
 
@@ -59,6 +140,35 @@ export default function Header() {
               {user.institutionNom}
             </span>
           </div>
+        )}
+
+        {/* Security Indicator */}
+        {isPlatformAdmin && (
+          <button
+            onClick={() => navigate('/security')}
+            className={`flex items-center gap-2 px-3 py-1.5 border rounded-lg transition-all duration-300 hover:scale-105 active:scale-95 ${getStatusColor()}`}
+            title={`Sécurité: ${securityData?.totalCorruptions || 0} corruption(s). Prochain scan dans ${formatTime(secondsLeft)}.`}
+            id="btn-header-security-indicator"
+          >
+            <div className="relative flex items-center justify-center">
+              {securityData?.totalCorruptions > 0 ? (
+                <ShieldAlert className="w-4 h-4 animate-pulse text-yellow-400" />
+              ) : (
+                <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              )}
+              <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                  securityData?.totalCorruptions >= 10 ? 'bg-red-400' : securityData?.totalCorruptions > 0 ? 'bg-yellow-400' : 'bg-emerald-400'
+                }`}></span>
+                <span className={`relative inline-flex rounded-full h-2 w-2 ${
+                  securityData?.totalCorruptions >= 10 ? 'bg-red-500' : securityData?.totalCorruptions > 0 ? 'bg-yellow-500' : 'bg-emerald-500'
+                }`}></span>
+              </span>
+            </div>
+            <span className="font-mono text-xs font-bold leading-none tracking-tight">
+              {formatTime(secondsLeft)}
+            </span>
+          </button>
         )}
 
         {/* Notification bell */}

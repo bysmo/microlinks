@@ -223,16 +223,21 @@ export default function MonEtablissementPage() {
         compteReglementApi.findAll(id),
         institutionApi.findAll({ statut: 'ACTIF', size: 200 })
       ]);
-      setComptes(comptesRes.data || []);
+      const comptesData = Array.isArray(comptesRes.data) ? comptesRes.data : [];
+      setComptes(comptesData);
       const allInst = allInstRes.data?.content || [];
-      setBanques(allInst.filter(i => i.typeInstitution === 'BANQUE'));
+      setBanques(Array.isArray(allInst) ? allInst.filter(i => i.typeInstitution === 'BANQUE') : []);
     } catch (e) {
       console.warn('Erreur chargement comptes:', e.message);
+      setComptes([]);
       // Fallback: try loading banks alone
       try {
         const banquesRes = await institutionApi.findAll({ statut: 'ACTIF', type: 'BANQUE', size: 200 });
-        setBanques(banquesRes.data?.content || []);
-      } catch (_) {}
+        const content = banquesRes.data?.content || [];
+        setBanques(Array.isArray(content) ? content : []);
+      } catch (_) {
+        setBanques([]);
+      }
     }
   }, []);
 
@@ -248,8 +253,30 @@ export default function MonEtablissementPage() {
     e.preventDefault();
     if (!instId) return;
     setSaving(true);
+
+    // Nettoyer les champs pour éviter les erreurs de désérialisation (UUID, Date) et de validation
+    const cleanedData = { ...formData };
+
+    // Convertir les chaînes vides en null pour les champs optionnels ou typés
+    Object.keys(cleanedData).forEach(key => {
+      if (typeof cleanedData[key] === 'string' && cleanedData[key].trim() === '') {
+        cleanedData[key] = null;
+      }
+    });
+
+    // Validations de base côté client
+    if (cleanedData.email && !/\S+@\S+\.\S+/.test(cleanedData.email)) {
+      setSaving(false);
+      return toast.error("Format d'email invalide");
+    }
+
+    if (cleanedData.telephone && !/^\+?[0-9\s\-()]{7,20}$/.test(cleanedData.telephone)) {
+      setSaving(false);
+      return toast.error("Format de téléphone invalide (7 à 20 caractères, chiffres, +, -, espaces)");
+    }
+
     try {
-      await institutionApi.update(instId, formData);
+      await institutionApi.update(instId, cleanedData);
       toast.success("Paramètres de l'établissement enregistrés avec succès !");
       loadInstitution();
     } catch (err) {

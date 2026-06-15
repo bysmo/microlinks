@@ -2,6 +2,7 @@ package com.microlinks.gateway.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 import java.util.Map;
@@ -10,6 +11,7 @@ import java.util.Map;
 public class FallbackController {
 
     @GetMapping("/fallback")
+    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
     public Mono<Map<String, Object>> fallback() {
         return Mono.just(Map.of(
             "status", HttpStatus.SERVICE_UNAVAILABLE.value(),

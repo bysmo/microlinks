@@ -73,6 +73,12 @@ public class InstitutionController {
             @AuthenticationPrincipal Jwt jwt) {
         
         String userInstitutionId = jwt.getClaimAsString("institution_id");
+        if (userInstitutionId == null) {
+            java.util.List<String> instIds = jwt.getClaimAsStringList("institution_id");
+            if (instIds != null && !instIds.isEmpty()) {
+                userInstitutionId = instIds.get(0);
+            }
+        }
         boolean isPlatformAdmin = false;
         java.util.Map<String, Object> realmAccess = jwt.getClaimAsMap("realm_access");
         if (realmAccess != null && realmAccess.containsKey("roles")) {

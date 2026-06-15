@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="op-006-add-aml-country-and-sources" author="microlinks">
+        <!-- Add pays column to aml_sanctions -->
+        <addColumn tableName="aml_sanctions">
+            <column name="pays" type="VARCHAR(100)"/>
+        </addColumn>
+
+        <!-- Create aml_sources table -->
+        <createTable tableName="aml_sources">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="nom" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="lien_web" type="VARCHAR(255)"/>
+            <column name="format_fichier" type="VARCHAR(20)"/>
+            <column name="description" type="TEXT"/>
+            <column name="date_derniere_sync" type="TIMESTAMP"/>
+        </createTable>
+    </changeSet>
+</databaseChangeLog>

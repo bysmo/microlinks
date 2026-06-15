@@ -99,6 +99,10 @@ public class FactureController {
         if (institutionId != null) {
             try { return UUID.fromString(institutionId); } catch (Exception ignored) {}
         }
+        java.util.List<String> instIds = jwt.getClaimAsStringList("institution_id");
+        if (instIds != null && !instIds.isEmpty()) {
+            try { return UUID.fromString(instIds.get(0)); } catch (Exception ignored) {}
+        }
         return null;
     }
 }

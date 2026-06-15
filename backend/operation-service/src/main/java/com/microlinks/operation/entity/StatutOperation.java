@@ -21,5 +21,7 @@ public enum StatutOperation {
     ACCEPTE_BENEFICIAIRE,       // Validé et comptabilisé par l'institution bénéficiaire
     COMPTABILISE,               // Opération finalisée et comptabilisée
     REJETE,                     // Rejet définitif
-    ANNULE                      // Annulé par l'émetteur
+    ANNULE,                     // Annulé par l'émetteur
+    SUSPENDU_AML,               // Suspendu pour vérification AML/CFT
+    REJETE_AML                  // Rejeté pour motif AML/CFT
 }

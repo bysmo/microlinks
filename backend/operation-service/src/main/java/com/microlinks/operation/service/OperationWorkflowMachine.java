@@ -16,12 +16,17 @@ public class OperationWorkflowMachine {
     private static final Map<StatutOperation, Set<StatutOperation>> TRANSITIONS = Map.of(
         StatutOperation.BROUILLON, Set.of(
             StatutOperation.SOUMIS,
+            StatutOperation.SUSPENDU_AML,
             StatutOperation.ANNULE
         ),
         StatutOperation.SOUMIS, Set.of(
             StatutOperation.ACCEPTE_EMETTEUR,
             StatutOperation.REJETE_EMETTEUR,
             StatutOperation.ANNULE
+        ),
+        StatutOperation.SUSPENDU_AML, Set.of(
+            StatutOperation.SOUMIS,
+            StatutOperation.REJETE_AML
         ),
         StatutOperation.ACCEPTE_EMETTEUR, Set.of(
             StatutOperation.ACCEPTE_BANQUE_EMETTRICE,
@@ -69,6 +74,8 @@ public class OperationWorkflowMachine {
             case COMPTABILISE -> "Comptabilisé avec succès";
             case REJETE -> "Rejeté définitivement";
             case ANNULE -> "Annulé";
+            case SUSPENDU_AML -> "Suspendu - AML/CFT";
+            case REJETE_AML -> "Rejeté - AML/CFT";
         };
     }
 
@@ -82,6 +89,7 @@ public class OperationWorkflowMachine {
             case ACCEPTE_BANQUE_EMETTRICE -> "La banque correspondante de l'institution bénéficiaire doit valider";
             case ACCEPTE_BANQUE_RECEPTRICE -> "L'institution bénéficiaire doit accepter et comptabiliser";
             case ACCEPTE_BENEFICIAIRE -> "Opération prête à être comptabilisée";
+            case SUSPENDU_AML -> "Le service de conformité AML/CFT doit valider cette opération";
             default -> "";
         };
     }

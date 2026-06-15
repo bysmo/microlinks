@@ -85,6 +85,18 @@ export const operationApi = {
   rejeter: (id, motif) => api.post(`/api/v1/operations/${id}/rejeter`, { motif }),
   annuler: (id, motif) => api.post(`/api/v1/operations/${id}/annuler`, { motif }),
   getStats: () => api.get('/api/v1/operations/stats'),
+  securityScan: () => api.get('/api/v1/operations/security/scan'),
+  getSanctions: () => api.get('/api/v1/operations/aml/sanctions'),
+  importSanctionsExcel: (formData) => api.post('/api/v1/operations/aml/sanctions/import-excel', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+  syncSanctionsWeb: (url) => api.post('/api/v1/operations/aml/sanctions/sync-web', null, { params: url ? { url } : {} }),
+  getSuspendedAml: (params) => api.get('/api/v1/operations/aml/suspended', { params }),
+  decideAml: (id, decision, commentaire) => api.post(`/api/v1/operations/aml/${id}/decision`, { decision, commentaire }),
+  getAmlSources: () => api.get('/api/v1/operations/aml/sources'),
+  createAmlSource: (data) => api.post('/api/v1/operations/aml/sources', data),
+  updateAmlSource: (id, data) => api.put(`/api/v1/operations/aml/sources/${id}`, data),
+  deleteAmlSource: (id) => api.delete(`/api/v1/operations/aml/sources/${id}`),
 };
 
 // ======================== FACTURATION / BILLING ========================

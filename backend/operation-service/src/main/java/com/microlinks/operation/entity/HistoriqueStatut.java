@@ -46,4 +46,34 @@ public class HistoriqueStatut {
 
     @Column(name = "date_action", nullable = false)
     private LocalDateTime dateAction;
+
+    @Column(name = "hash", length = 64)
+    private String hash;
+
+    @Column(name = "previous_hash", length = 64)
+    private String previousHash;
+
+    public String calculateHash(String previousHashVal) {
+        String payload = String.format("%s|%s|%s|%s|%s|%s",
+            previousHashVal != null ? previousHashVal : "",
+            operation != null && operation.getId() != null ? operation.getId().toString() : "",
+            statutAvant != null ? statutAvant.name() : "NULL",
+            statutApres != null ? statutApres.name() : "",
+            acteurId != null ? acteurId : "",
+            dateAction != null ? dateAction.toString() : ""
+        );
+        try {
+            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] encodedHash = digest.digest(payload.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : encodedHash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) hexString.append('0');
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (Exception e) {
+            throw new RuntimeException("Error calculating history hash", e);
+        }
+    }
 }

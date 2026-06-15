@@ -12,6 +12,8 @@ import MonEtablissementPage from './pages/Institutions/MonEtablissementPage';
 import BillingAdminPage from './pages/Billing/BillingAdminPage';
 import MesFacturesPage from './pages/Billing/MesFacturesPage';
 import AdministrationPage from './pages/Administration/AdministrationPage';
+import SecurityDashboardPage from './pages/Security/SecurityDashboardPage';
+import AmlDashboardPage from './pages/Security/AmlDashboardPage';
 import { AlertCircle } from 'lucide-react';
 
 function MockPage({ title }) {
@@ -94,6 +96,8 @@ function AppContent() {
         <Route path="mes-factures" element={<MesFacturesPage />} />
         <Route path="rapports" element={<MockPage title="Rapports & Exports" />} />
         <Route path="administration" element={<AdministrationPage />} />
+        <Route path="security" element={<SecurityDashboardPage />} />
+        <Route path="aml" element={<AmlDashboardPage />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Route>
     </Routes>

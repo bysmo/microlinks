@@ -9,4 +9,5 @@ import java.util.UUID;
 @Repository
 public interface HistoriqueStatutRepository extends JpaRepository<HistoriqueStatut, UUID> {
     List<HistoriqueStatut> findByOperationIdOrderByDateActionAsc(UUID operationId);
+    HistoriqueStatut findFirstByOrderByDateActionDesc();
 }
