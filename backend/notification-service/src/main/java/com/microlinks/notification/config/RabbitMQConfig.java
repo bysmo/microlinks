@@ -55,6 +55,18 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public Queue userQueue() {
+        return QueueBuilder.durable("microlinks.users.notifications.queue").build();
+    }
+
+    @Bean
+    public Binding userBinding(Queue userQueue, TopicExchange operationsExchange) {
+        return BindingBuilder.bind(userQueue)
+                .to(operationsExchange)
+                .with("user.#");
+    }
+
+    @Bean
     public Jackson2JsonMessageConverter messageConverter() {
         return new Jackson2JsonMessageConverter();
     }

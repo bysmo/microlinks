@@ -34,11 +34,21 @@ spring:
       password: ${SPRING_REDIS_PASSWORD:}
       timeout: 2000ms
 
+  rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: 5672
+    username: ${SPRING_RABBITMQ_USERNAME:microlinks}
+    password: ${SPRING_RABBITMQ_PASSWORD:RabbitMQ@2024}
+
   security:
     oauth2:
       resourceserver:
         jwt:
           jwk-set-uri: ${KEYCLOAK_URL:http://localhost:8443}/realms/${KEYCLOAK_REALM:microlinks}/protocol/openid-connect/certs
+
+microlinks:
+  rabbitmq:
+    exchange: microlinks.operations.exchange
 
 springdoc:
   api-docs:

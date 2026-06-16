@@ -1,7 +1,10 @@
 package com.microlinks.institution.service;
 
+import com.microlinks.institution.dto.UserDto;
+import com.microlinks.institution.dto.UserCreateRequest;
 import com.microlinks.institution.entity.Institution;
 import com.microlinks.institution.entity.TypeInstitution;
+import com.microlinks.institution.exception.BusinessException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
@@ -10,6 +13,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.Set;
 
@@ -29,7 +35,15 @@ public class KeycloakProvisioningService {
     @Value("${KEYCLOAK_ADMIN_PASSWORD:KeycloakAdmin@2024#}")
     private String adminPassword;
 
+    @Value("${microlinks.rabbitmq.exchange:microlinks.operations.exchange}")
+    private String operationsExchange;
+
+    private final RabbitTemplate rabbitTemplate;
     private final RestClient restClient = RestClient.create();
+
+    public KeycloakProvisioningService(RabbitTemplate rabbitTemplate) {
+        this.rabbitTemplate = rabbitTemplate;
+    }
 
     public void provisionUsersForInstitution(Institution institution) {
         log.info("Début de la création des utilisateurs Keycloak pour l'institution: {}", institution.getNom());
@@ -376,6 +390,269 @@ public class KeycloakProvisioningService {
             log.info("Rôle {} assigné avec succès à l'utilisateur ID {}", roleRep.get("name"), userId);
         } catch (Exception e) {
             log.error("Erreur d'association du rôle à l'utilisateur: {}", e.getMessage());
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<UserDto> getUsersForInstitution(UUID institutionId) {
+        String adminToken = getAdminToken();
+        if (adminToken == null) {
+            throw new RuntimeException("Impossible d'obtenir le jeton administrateur de Keycloak");
+        }
+
+        String searchUrl = keycloakUrl + "/admin/realms/" + realm + "/users?q=institution_id:" + institutionId + "&max=100";
+        try {
+            List<Map<String, Object>> users = restClient.get()
+                    .uri(searchUrl)
+                    .header("Authorization", "Bearer " + adminToken)
+                    .retrieve()
+                    .body(List.class);
+
+            if (users == null) {
+                return Collections.emptyList();
+            }
+
+            List<UserDto> result = new ArrayList<>();
+            for (Map<String, Object> u : users) {
+                Map<String, List<String>> attributes = (Map<String, List<String>>) u.get("attributes");
+                if (attributes == null) continue;
+                
+                List<String> instIds = attributes.get("institution_id");
+                if (instIds == null || !instIds.contains(institutionId.toString())) {
+                    continue; // Double filtrage de sécurité en Java
+                }
+
+                String userId = (String) u.get("id");
+                String username = (String) u.get("username");
+                String email = (String) u.get("email");
+                String firstName = (String) u.get("firstName");
+                String lastName = (String) u.get("lastName");
+                Boolean enabled = (Boolean) u.get("enabled");
+
+                String phone = null;
+                if (attributes.containsKey("telephone")) {
+                    List<String> phones = attributes.get("telephone");
+                    if (phones != null && !phones.isEmpty()) {
+                        phone = phones.get(0);
+                    }
+                }
+
+                String role = getUserRole(adminToken, userId);
+
+                UserDto dto = new UserDto();
+                dto.setId(userId);
+                dto.setUsername(username);
+                dto.setEmail(email);
+                dto.setFirstName(firstName);
+                dto.setLastName(lastName);
+                dto.setPhone(phone);
+                dto.setRole(role);
+                dto.setEnabled(enabled != null && enabled);
+                dto.setInstitutionId(institutionId);
+                result.add(dto);
+            }
+            return result;
+        } catch (Exception e) {
+            log.error("Erreur lors de la récupération des utilisateurs de l'institution {}: {}", institutionId, e.getMessage(), e);
+            throw new RuntimeException("Erreur de récupération des utilisateurs Keycloak : " + e.getMessage());
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private String getUserRole(String adminToken, String userId) {
+        String rolesUrl = keycloakUrl + "/admin/realms/" + realm + "/users/" + userId + "/role-mappings/realm";
+        try {
+            List<Map<String, Object>> roles = restClient.get()
+                    .uri(rolesUrl)
+                    .header("Authorization", "Bearer " + adminToken)
+                    .retrieve()
+                    .body(List.class);
+
+            if (roles != null) {
+                for (Map<String, Object> r : roles) {
+                    String roleName = (String) r.get("name");
+                    if ("BANK_ADMIN".equals(roleName) || "MESO_ADMIN".equals(roleName)) {
+                        return "ADMIN";
+                    } else if ("BANK_AGENT".equals(roleName) || "MESO_AGENT".equals(roleName)) {
+                        return "AGENT";
+                    } else if ("BANK_VALID".equals(roleName) || "MESO_VALID".equals(roleName)) {
+                        return "VALID";
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Erreur récupération rôles pour l'utilisateur {}: {}", userId, e.getMessage());
+        }
+        return "LECTEUR";
+    }
+
+    public UserDto createUserForInstitution(Institution institution, UserCreateRequest request, String currentUser) {
+        String adminToken = getAdminToken();
+        if (adminToken == null) {
+            throw new RuntimeException("Impossible d'obtenir le jeton administrateur de Keycloak");
+        }
+
+        String usersUrl = keycloakUrl + "/admin/realms/" + realm + "/users";
+
+        // Vérifier l'unicité de l'identifiant
+        try {
+            List<?> existingUsers = restClient.get()
+                    .uri(usersUrl + "?username=" + request.getUsername().toLowerCase())
+                    .header("Authorization", "Bearer " + adminToken)
+                    .retrieve()
+                    .body(List.class);
+            if (existingUsers != null && !existingUsers.isEmpty()) {
+                throw new BusinessException("Ce nom d'utilisateur est déjà utilisé.");
+            }
+
+            // Vérifier l'unicité de l'adresse email
+            existingUsers = restClient.get()
+                    .uri(usersUrl + "?email=" + request.getEmail())
+                    .header("Authorization", "Bearer " + adminToken)
+                    .retrieve()
+                    .body(List.class);
+            if (existingUsers != null && !existingUsers.isEmpty()) {
+                throw new BusinessException("Cette adresse email est déjà utilisée.");
+            }
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("Erreur vérification unicité Keycloak: {}", e.getMessage());
+        }
+
+        boolean isBank = institution.getTypeInstitution() == TypeInstitution.BANQUE;
+        String roleName;
+        if ("AGENT".equalsIgnoreCase(request.getRole())) {
+            roleName = isBank ? "BANK_AGENT" : "MESO_AGENT";
+        } else if ("VALID".equalsIgnoreCase(request.getRole())) {
+            roleName = isBank ? "BANK_VALID" : "MESO_VALID";
+        } else {
+            throw new BusinessException("Le rôle doit être AGENT ou VALID.");
+        }
+
+        String tempPassword = generateTemporaryPassword();
+
+        Map<String, Object> userJson = new HashMap<>();
+        userJson.put("username", request.getUsername().toLowerCase());
+        userJson.put("email", request.getEmail());
+        userJson.put("enabled", true);
+        userJson.put("emailVerified", true);
+        userJson.put("firstName", request.getFirstName());
+        userJson.put("lastName", request.getLastName());
+
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put("institution_id", List.of(institution.getId().toString()));
+        attributes.put("institution_nom", List.of(institution.getNom()));
+        if (request.getPhone() != null && !request.getPhone().isBlank()) {
+            attributes.put("telephone", List.of(request.getPhone()));
+        }
+        userJson.put("attributes", attributes);
+
+        Map<String, Object> credential = new HashMap<>();
+        credential.put("type", "password");
+        credential.put("value", tempPassword);
+        credential.put("temporary", true);
+        userJson.put("credentials", List.of(credential));
+
+        String userId;
+        try {
+            ResponseEntity<Void> response = restClient.post()
+                    .uri(usersUrl)
+                    .header("Authorization", "Bearer " + adminToken)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(userJson)
+                    .retrieve()
+                    .toBodilessEntity();
+
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                throw new RuntimeException("Erreur de création de l'utilisateur Keycloak : " + response.getStatusCode());
+            }
+
+            List<String> locationHeader = response.getHeaders().get("Location");
+            if (locationHeader == null || locationHeader.isEmpty()) {
+                throw new RuntimeException("Aucun ID utilisateur retourné par Keycloak");
+            }
+            String loc = locationHeader.get(0);
+            userId = loc.substring(loc.lastIndexOf("/") + 1);
+        } catch (Exception e) {
+            log.error("Erreur lors de la création de l'utilisateur {} dans Keycloak: {}", request.getUsername(), e.getMessage(), e);
+            throw new RuntimeException("Erreur de création Keycloak: " + e.getMessage());
+        }
+
+        // Assigner le rôle
+        Map<String, Object> roleRep = getRoleRepresentation(adminToken, roleName);
+        if (roleRep == null) {
+            throw new RuntimeException("Rôle " + roleName + " introuvable dans Keycloak");
+        }
+        assignRoleToUser(adminToken, userId, roleRep);
+
+        // Publier l'événement RabbitMQ pour l'email
+        publishUserCreatedEvent(institution, request, tempPassword);
+
+        UserDto dto = new UserDto();
+        dto.setId(userId);
+        dto.setUsername(request.getUsername().toLowerCase());
+        dto.setEmail(request.getEmail());
+        dto.setFirstName(request.getFirstName());
+        dto.setLastName(request.getLastName());
+        dto.setPhone(request.getPhone());
+        dto.setRole(request.getRole().toUpperCase());
+        dto.setEnabled(true);
+        dto.setInstitutionId(institution.getId());
+
+        return dto;
+    }
+
+    public void updateUserStatus(String userId, boolean enabled) {
+        String adminToken = getAdminToken();
+        if (adminToken == null) {
+            throw new RuntimeException("Impossible d'obtenir le jeton administrateur de Keycloak");
+        }
+
+        String userUrl = keycloakUrl + "/admin/realms/" + realm + "/users/" + userId;
+        Map<String, Object> updateJson = new HashMap<>();
+        updateJson.put("enabled", enabled);
+
+        try {
+            restClient.put()
+                    .uri(userUrl)
+                    .header("Authorization", "Bearer " + adminToken)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(updateJson)
+                    .retrieve()
+                    .toBodilessEntity();
+            log.info("Statut de l'utilisateur Keycloak {} mis à jour: enabled={}", userId, enabled);
+        } catch (Exception e) {
+            log.error("Erreur de mise à jour du statut Keycloak pour l'utilisateur ID {}: {}", userId, e.getMessage(), e);
+            throw new RuntimeException("Erreur de mise à jour du statut Keycloak: " + e.getMessage());
+        }
+    }
+
+    private String generateTemporaryPassword() {
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
+        java.security.SecureRandom random = new java.security.SecureRandom();
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 10; i++) {
+            sb.append(chars.charAt(random.nextInt(chars.length())));
+        }
+        return sb.toString() + "A1!";
+    }
+
+    private void publishUserCreatedEvent(Institution institution, UserCreateRequest request, String tempPassword) {
+        try {
+            Map<String, Object> event = new HashMap<>();
+            event.put("type", "CREATED");
+            event.put("username", request.getUsername().toLowerCase());
+            event.put("email", request.getEmail());
+            event.put("firstName", request.getFirstName());
+            event.put("lastName", request.getLastName());
+            event.put("tempPassword", tempPassword);
+            event.put("institutionNom", institution.getNom());
+
+            rabbitTemplate.convertAndSend(operationsExchange, "user.created", event);
+            log.info("Événement de création d'utilisateur publié sur RabbitMQ pour : {}", request.getUsername());
+        } catch (Exception e) {
+            log.error("Impossible de publier l'événement de création d'utilisateur sur RabbitMQ: {}", e.getMessage(), e);
         }
     }
 

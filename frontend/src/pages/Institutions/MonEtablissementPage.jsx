@@ -2,9 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Building2, CreditCard, Globe, Phone, Mail, MapPin,
   Save, AlertCircle, Calendar, ShieldCheck, Loader2,
-  Plus, Trash2, Pencil, X, Check, ChevronsUpDown, Landmark
+  Plus, Trash2, Pencil, X, Check, ChevronsUpDown, Landmark,
+  Users, UserPlus
 } from 'lucide-react';
-import { institutionApi, compteReglementApi } from '../../services/api';
+import { institutionApi, compteReglementApi, userApi } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -129,6 +130,152 @@ function CompteModal({ isOpen, onClose, onSave, compte, banques }) {
   );
 }
 
+// ─── Composant modal pour ajouter un collaborateur ──────────────────────────
+function UserModal({ isOpen, onClose, onSave }) {
+  const [form, setForm] = useState({ username: '', email: '', firstName: '', lastName: '', phone: '', role: 'AGENT' });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setForm({ username: '', email: '', firstName: '', lastName: '', phone: '', role: 'AGENT' });
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.username.trim()) return toast.error("Le nom d'utilisateur est obligatoire");
+    if (form.username.trim().length < 3) return toast.error("Le nom d'utilisateur doit faire au moins 3 caractères");
+    if (!form.email.trim()) return toast.error("L'adresse email est obligatoire");
+    if (!/\S+@\S+\.\S+/.test(form.email)) return toast.error("Format d'adresse email invalide");
+    if (!form.firstName.trim()) return toast.error("Le prénom est obligatoire");
+    if (!form.lastName.trim()) return toast.error("Le nom est obligatoire");
+    
+    setSaving(true);
+    try {
+      const cleanedForm = { ...form };
+      if (!cleanedForm.phone || cleanedForm.phone.trim() === '') {
+        cleanedForm.phone = null;
+      }
+      await onSave(cleanedForm);
+      onClose();
+    } catch (err) {
+      // Les erreurs de l'API sont gérées par le composant parent
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <div className="glass-card w-full max-w-lg p-6 space-y-5 animate-slide-up">
+        <div className="flex items-center justify-between">
+          <h3 className="text-white font-bold text-lg flex items-center gap-2">
+            <Users className="w-5 h-5 text-primary-400" />
+            Ajouter un collaborateur
+          </h3>
+          <button onClick={onClose} className="text-dark-400 hover:text-white transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-dark-300 text-xs font-semibold" htmlFor="user-firstName">Prénom *</label>
+              <input
+                id="user-firstName"
+                type="text"
+                value={form.firstName}
+                onChange={e => setForm(p => ({ ...p, firstName: e.target.value }))}
+                placeholder="Ex: Jean"
+                className="input"
+                autoComplete="off"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-dark-300 text-xs font-semibold" htmlFor="user-lastName">Nom *</label>
+              <input
+                id="user-lastName"
+                type="text"
+                value={form.lastName}
+                onChange={e => setForm(p => ({ ...p, lastName: e.target.value }))}
+                placeholder="Ex: Dupont"
+                className="input"
+                autoComplete="off"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-dark-300 text-xs font-semibold" htmlFor="user-username">Identifiant (Username) *</label>
+            <input
+              id="user-username"
+              type="text"
+              value={form.username}
+              onChange={e => setForm(p => ({ ...p, username: e.target.value }))}
+              placeholder="Ex: jdupont"
+              className="input font-mono"
+              autoComplete="off"
+            />
+            <p className="text-[10px] text-dark-400">Le nom d'utilisateur servira pour la connexion.</p>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-dark-300 text-xs font-semibold" htmlFor="user-email">Adresse Email *</label>
+            <input
+              id="user-email"
+              type="email"
+              value={form.email}
+              onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
+              placeholder="Ex: jean.dupont@cmfbf.com"
+              className="input"
+              autoComplete="off"
+            />
+            <p className="text-[10px] text-dark-400">Un mail contenant les identifiants temporaires sera envoyé à cette adresse.</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-dark-300 text-xs font-semibold" htmlFor="user-phone">Téléphone</label>
+              <input
+                id="user-phone"
+                type="text"
+                value={form.phone}
+                onChange={e => setForm(p => ({ ...p, phone: e.target.value }))}
+                placeholder="Ex: +22670123456"
+                className="input"
+                autoComplete="off"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-dark-300 text-xs font-semibold" htmlFor="user-role">Profil / Rôle *</label>
+              <select
+                id="user-role"
+                value={form.role}
+                onChange={e => setForm(p => ({ ...p, role: e.target.value }))}
+                className="select"
+              >
+                <option value="AGENT">Agent de Saisie</option>
+                <option value="VALID">Agent de Validation</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-2">
+            <button type="button" onClick={onClose} className="btn-secondary btn-sm">Annuler</button>
+            <button type="submit" disabled={saving} className="btn-primary btn-sm">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+              Créer le compte
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // ─── Page principale ────────────────────────────────────────────────────────
 export default function MonEtablissementPage() {
   const { user } = useAuth();
@@ -141,6 +288,61 @@ export default function MonEtablissementPage() {
   const [comptes, setComptes] = useState([]);
   const [banques, setBanques] = useState([]);
   const [compteModal, setCompteModal] = useState({ open: false, compte: null });
+
+  // Gestion des utilisateurs / collaborateurs
+  const [activeTab, setActiveTab] = useState('settings'); // 'settings' ou 'users'
+  const [users, setUsers] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [userModalOpen, setUserModalOpen] = useState(false);
+
+  const loadUsers = useCallback(async (id) => {
+    if (!id) return;
+    setLoadingUsers(true);
+    try {
+      const res = await userApi.findAll(id);
+      setUsers(Array.isArray(res.data) ? res.data : []);
+    } catch (e) {
+      console.warn('Erreur chargement collaborateurs:', e.message);
+      toast.error('Impossible de charger la liste des collaborateurs');
+    } finally {
+      setLoadingUsers(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'users' && instId) {
+      loadUsers(instId);
+    }
+  }, [activeTab, instId, loadUsers]);
+
+  const handleCreateUser = async (userData) => {
+    try {
+      await userApi.create(instId, {
+        ...userData,
+        institutionId: instId
+      });
+      toast.success('Collaborateur créé avec succès. Un mail contenant ses identifiants lui a été envoyé !');
+      loadUsers(instId);
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message;
+      toast.error(`Erreur de création : ${msg}`);
+      throw err;
+    }
+  };
+
+  const handleToggleUserStatus = async (userId, currentStatus) => {
+    const actionName = currentStatus ? 'désactiver' : 'activer';
+    if (!window.confirm(`Voulez-vous vraiment ${actionName} ce collaborateur ?`)) return;
+    
+    try {
+      await userApi.updateStatus(instId, userId, !currentStatus);
+      toast.success(`Collaborateur ${currentStatus ? 'désactivé' : 'activé'} avec succès !`);
+      loadUsers(instId);
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message;
+      toast.error(`Erreur : ${msg}`);
+    }
+  };
 
   // Form contact/settlement
   const [formData, setFormData] = useState({
@@ -353,7 +555,32 @@ export default function MonEtablissementPage() {
         </span>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Tabs */}
+      <div className="flex gap-6 border-b border-white/5 pb-px mb-6">
+        <button
+          onClick={() => setActiveTab('settings')}
+          className={`pb-3 text-sm font-semibold border-b-2 transition-all ${
+            activeTab === 'settings'
+              ? 'text-primary-400 border-primary-400'
+              : 'text-dark-400 border-transparent hover:text-white'
+          }`}
+        >
+          Paramètres de l'établissement
+        </button>
+        <button
+          onClick={() => setActiveTab('users')}
+          className={`pb-3 text-sm font-semibold border-b-2 transition-all ${
+            activeTab === 'users'
+              ? 'text-primary-400 border-primary-400'
+              : 'text-dark-400 border-transparent hover:text-white'
+          }`}
+        >
+          Collaborateurs & Utilisateurs
+        </button>
+      </div>
+
+      {activeTab === 'settings' ? (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* ─── Left Column ──────────────────────────────────────────────────── */}
         <div className="lg:col-span-2 space-y-6">
 
@@ -574,6 +801,125 @@ export default function MonEtablissementPage() {
           </div>
         </div>
       </div>
+      ) : (
+        <div className="glass-card p-6 space-y-6">
+          <div className="flex items-center justify-between border-b border-white/5 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-primary-500/20 text-primary-400 flex items-center justify-center">
+                <Users className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-white font-semibold">Collaborateurs de l'établissement</h2>
+                <p className="text-dark-400 text-xs mt-0.5">
+                  Gérez les accès des agents de saisie et des validateurs de votre institution.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setUserModalOpen(true)}
+              className="btn-primary btn-sm flex items-center gap-1.5"
+              id="btn-add-collaborator"
+            >
+              <UserPlus className="w-4 h-4" />
+              Créer un collaborateur
+            </button>
+          </div>
+
+          {loadingUsers ? (
+            <div className="flex h-48 items-center justify-center">
+              <Loader2 className="w-8 h-8 text-primary-400 animate-spin" />
+            </div>
+          ) : users.length === 0 ? (
+            <div className="text-center py-12 text-dark-400 text-sm">
+              <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
+              Aucun collaborateur enregistré pour le moment.
+              <br />
+              <span className="text-xs text-dark-500">
+                Cliquez sur le bouton ci-dessus pour ajouter votre premier agent ou validateur.
+              </span>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm text-dark-300">
+                <thead>
+                  <tr className="border-b border-white/5 text-dark-400 text-xs font-semibold uppercase">
+                    <th className="pb-3">Collaborateur</th>
+                    <th className="pb-3">Identifiant</th>
+                    <th className="pb-3">Rôle / Profil</th>
+                    <th className="pb-3">Statut</th>
+                    <th className="pb-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {users.map(u => (
+                    <tr key={u.id} className="hover:bg-white/[0.01] transition-colors">
+                      <td className="py-4 pr-3">
+                        <div className="font-medium text-white">
+                          {u.firstName} {u.lastName}
+                        </div>
+                        <div className="text-xs text-dark-400 mt-0.5">{u.email}</div>
+                        {u.phone && (
+                          <div className="text-[10px] text-dark-500 mt-0.5 font-mono">{u.phone}</div>
+                        )}
+                      </td>
+                      <td className="py-4 font-mono text-xs">{u.username}</td>
+                      <td className="py-4">
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                          u.role === 'ADMIN'
+                            ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                            : u.role === 'VALID'
+                            ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
+                            : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                        }`}>
+                          {u.role === 'ADMIN'
+                            ? 'Administrateur'
+                            : u.role === 'VALID'
+                            ? 'Validateur'
+                            : 'Agent'}
+                        </span>
+                      </td>
+                      <td className="py-4">
+                        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${
+                          u.enabled
+                            ? 'bg-green-500/10 text-green-400'
+                            : 'bg-red-500/10 text-red-400'
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${u.enabled ? 'bg-green-400' : 'bg-red-400'}`} />
+                          {u.enabled ? 'Actif' : 'Désactivé'}
+                        </span>
+                      </td>
+                      <td className="py-4 text-right">
+                        {u.role !== 'ADMIN' ? (
+                          <button
+                            onClick={() => handleToggleUserStatus(u.id, u.enabled)}
+                            className={`btn btn-sm ${
+                              u.enabled
+                                ? 'btn-ghost text-red-400 hover:bg-red-950/20 hover:text-red-300 font-medium'
+                                : 'btn-ghost text-green-400 hover:bg-green-950/20 hover:text-green-300 font-medium'
+                            }`}
+                          >
+                            {u.enabled ? 'Désactiver' : 'Activer'}
+                          </button>
+                        ) : (
+                          <span className="text-xs text-dark-500 italic pr-3 font-medium">Système</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Modal collaborateurs */}
+      <UserModal
+        isOpen={userModalOpen}
+        onClose={() => setUserModalOpen(false)}
+        onSave={handleCreateUser}
+      />
 
       {/* Modal compte de règlement */}
       <CompteModal

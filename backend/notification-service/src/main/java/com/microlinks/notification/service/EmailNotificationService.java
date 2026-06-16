@@ -183,4 +183,72 @@ public class EmailNotificationService {
                     : ""
             );
     }
+
+    public void sendUserCreationEmail(String destinataire, String firstName, String lastName,
+                                      String username, String tempPassword, String institutionNom) {
+        try {
+            String subject = "[MicroLinks] Création de votre compte utilisateur";
+            String htmlContent = buildUserCreationHtml(firstName, lastName, username, tempPassword, institutionNom);
+
+            if (destinataire != null && !destinataire.isBlank()
+                    && fromEmail != null && !fromEmail.isBlank()) {
+                MimeMessage mimeMessage = mailSender.createMimeMessage();
+                MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
+                helper.setFrom(fromEmail, fromName);
+                helper.setTo(destinataire);
+                helper.setSubject(subject);
+                helper.setText(htmlContent, true);
+                
+                // mailSender.send(mimeMessage); // Activer une fois SMTP configuré
+                log.info("Email création utilisateur prêt pour {} -> {} (Username: {}, TempPassword: {})", 
+                        firstName + " " + lastName, destinataire, username, tempPassword);
+            } else {
+                log.warn("Email création utilisateur non envoyé : destinataire ou expéditeur vide");
+            }
+        } catch (Exception e) {
+            log.warn("Envoi email création utilisateur non configuré ou erreur: {}", e.getMessage());
+        }
+    }
+
+    private String buildUserCreationHtml(String firstName, String lastName, String username,
+                                         String tempPassword, String institutionNom) {
+        return """
+            <!DOCTYPE html>
+            <html><head><meta charset="UTF-8"></head>
+            <body style="font-family: Arial, sans-serif; background:#f5f5f5; margin:0; padding:20px;">
+              <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:8px;overflow:hidden;">
+                <div style="background:#1e3a5f;padding:24px;text-align:center;">
+                  <h1 style="color:#fff;margin:0;font-size:22px;">🔗 MicroLinks</h1>
+                  <p style="color:#dbeafe;margin:6px 0 0;">Création de compte</p>
+                </div>
+                <div style="padding:24px;color:#334155;">
+                  <p>Bonjour <strong>%s %s</strong>,</p>
+                  <p>Un compte utilisateur a été créé pour vous au sein de l'établissement <strong>%s</strong> sur la plateforme MicroLinks.</p>
+                  
+                  <p>Voici vos identifiants temporaires de connexion :</p>
+                  <table style="width:100%%;border-collapse:collapse;margin:15px 0;">
+                    <tr><td style="padding:8px 0;color:#666;width:150px;">Identifiant (Username)</td><td style="font-weight:bold;">%s</td></tr>
+                    <tr><td style="padding:8px 0;color:#666;">Mot de passe temporaire</td><td style="font-weight:bold;font-family:monospace;background:#f1f5f9;padding:4px 8px;border-radius:4px;">%s</td></tr>
+                  </table>
+                  
+                  <p style="margin-top:20px;">Pour activer votre compte et définir votre mot de passe définitif, connectez-vous dès maintenant à la plateforme en cliquant sur le lien ci-dessous :</p>
+                  <div style="text-align:center;margin:30px 0;">
+                    <a href="http://localhost:3000" style="background:#f3c623;color:#0f172a;padding:12px 24px;font-weight:bold;text-decoration:none;border-radius:6px;display:inline-block;">Se connecter à MicroLinks</a>
+                  </div>
+                  
+                  <p style="color:#ef4444;font-size:13px;font-weight:medium;">Note : Pour des raisons de sécurité, vous serez invité à changer ce mot de passe dès votre première connexion.</p>
+                </div>
+                <div style="background:#f5f5f5;padding:16px;text-align:center;color:#999;font-size:12px;">
+                  <p style="margin:0;">© 2026 MicroLinks Platform. Tous droits réservés.</p>
+                </div>
+              </div>
+            </body></html>
+            """.formatted(
+                firstName != null ? firstName : "",
+                lastName != null ? lastName : "",
+                institutionNom != null ? institutionNom : "",
+                username != null ? username : "",
+                tempPassword != null ? tempPassword : ""
+            );
+    }
 }

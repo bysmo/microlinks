@@ -65,6 +65,14 @@ export const compteReglementApi = {
   remove: (institutionId, compteId) => api.delete(`/api/v1/institutions/${institutionId}/comptes-reglement/${compteId}`),
 };
 
+// ======================== UTILISATEURS / COLLABORATEURS ========================
+
+export const userApi = {
+  findAll: (institutionId) => api.get(`/api/v1/institutions/${institutionId}/users`),
+  create: (institutionId, data) => api.post(`/api/v1/institutions/${institutionId}/users`, data),
+  updateStatus: (institutionId, userId, enabled) => api.patch(`/api/v1/institutions/${institutionId}/users/${userId}/status`, null, { params: { enabled } }),
+};
+
 // ======================== ZONES MONETAIRES ========================
 
 export const zoneMonetaireApi = {
