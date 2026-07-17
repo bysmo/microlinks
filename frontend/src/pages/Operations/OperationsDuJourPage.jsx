@@ -12,6 +12,7 @@ import OperationDetailModal from '../../components/common/OperationDetailModal';
 import { operationApi, institutionApi, rapportApi, downloadBlob } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
+import PinValidationModal from '../../components/common/PinValidationModal';
 
 export default function OperationsDuJourPage() {
   const navigate = useNavigate();
@@ -29,6 +30,17 @@ export default function OperationsDuJourPage() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [workflowAction, setWorkflowAction] = useState(null);
   const [commentaire, setCommentaire] = useState('');
+
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pinCallback, setPinCallback] = useState(null);
+
+  const executeWithPin = (actionFn) => {
+    setPinCallback(() => async (pin) => {
+      setShowPinModal(false);
+      await actionFn(pin);
+    });
+    setShowPinModal(true);
+  };
 
   // Institutions pour les filtres
   const [institutionsList, setInstitutionsList] = useState([]);
@@ -136,32 +148,34 @@ export default function OperationsDuJourPage() {
     setWorkflowAction({ type: 'ANNULER', op });
   };
 
-  const submitWorkflowAction = async () => {
+  const submitWorkflowAction = () => {
     if (!workflowAction) return;
-    setActionLoading(true);
-    const { type, op, nextStatus } = workflowAction;
-    try {
-      if (type === 'SOUMETTRE') {
-        await operationApi.soumettre(op.id, commentaire);
-        toast.success("Opération soumise avec succès !");
-      } else if (type === 'VALIDER') {
-        await operationApi.valider(op.id, nextStatus, commentaire);
-        toast.success("Opération validée avec succès !");
-      } else if (type === 'REJETER') {
-        await operationApi.rejeter(op.id, commentaire);
-        toast.success("Opération rejetée avec succès !");
-      } else if (type === 'ANNULER') {
-        await operationApi.annuler(op.id, commentaire);
-        toast.success("Opération annulée avec succès !");
+    executeWithPin(async (pin) => {
+      setActionLoading(true);
+      const { type, op, nextStatus } = workflowAction;
+      try {
+        if (type === 'SOUMETTRE') {
+          await operationApi.soumettre(op.id, commentaire, pin);
+          toast.success("Opération soumise avec succès !");
+        } else if (type === 'VALIDER') {
+          await operationApi.valider(op.id, nextStatus, commentaire, pin);
+          toast.success("Opération validée avec succès !");
+        } else if (type === 'REJETER') {
+          await operationApi.rejeter(op.id, commentaire, pin);
+          toast.success("Opération rejetée avec succès !");
+        } else if (type === 'ANNULER') {
+          await operationApi.annuler(op.id, commentaire, pin);
+          toast.success("Opération annulée avec succès !");
+        }
+        setWorkflowAction(null);
+        setCommentaire('');
+        fetchData();
+      } catch (err) {
+        toast.error(err.response?.data?.message || `Échec de l'action`);
+      } finally {
+        setActionLoading(false);
       }
-      setWorkflowAction(null);
-      setCommentaire('');
-      fetchData();
-    } catch (err) {
-      toast.error(err.response?.data?.message || `Échec de l'action`);
-    } finally {
-      setActionLoading(false);
-    }
+    });
   };
 
   // ===================== Workflow complet =====================
@@ -949,6 +963,11 @@ export default function OperationsDuJourPage() {
           </div>
         </div>
       )}
+      <PinValidationModal
+        isOpen={showPinModal}
+        onClose={() => setShowPinModal(false)}
+        onConfirm={pinCallback}
+      />
     </div>
   );
 }

@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { operationApi } from '../../services/api';
 import toast from 'react-hot-toast';
+import PinValidationModal from '../../components/common/PinValidationModal';
 
 export default function AmlDashboardPage() {
   const [activeTab, setActiveTab] = useState('alerts'); // alerts, sanctions, sources
@@ -14,6 +15,17 @@ export default function AmlDashboardPage() {
   const [syncing, setSyncing] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [deciding, setDeciding] = useState(false);
+
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pinCallback, setPinCallback] = useState(null);
+
+  const executeWithPin = (actionFn) => {
+    setPinCallback(() => async (pin) => {
+      setShowPinModal(false);
+      await actionFn(pin);
+    });
+    setShowPinModal(true);
+  };
 
   // Data states
   const [suspendedOps, setSuspendedOps] = useState([]);
@@ -122,29 +134,31 @@ export default function AmlDashboardPage() {
     }
   };
 
-  const handleDecision = async (decision) => {
+  const handleDecision = (decision) => {
     if (!selectedOp) return;
     if (!decisionComment.trim()) {
       toast.error("Un commentaire de justification est obligatoire.");
       return;
     }
 
-    setDeciding(true);
-    try {
-      await operationApi.decideAml(selectedOp.id, decision, decisionComment);
-      toast.success(
-        decision === 'APPROUVER' 
-          ? "Opération libérée et ré-insérée dans le workflow." 
-          : "Opération bloquée et rejetée définitivement."
-      );
-      setSelectedOp(null);
-      setDecisionComment('');
-      fetchSuspendedQueue();
-    } catch (err) {
-      toast.error("Erreur de soumission de la décision.");
-    } finally {
-      setDeciding(false);
-    }
+    executeWithPin(async (pin) => {
+      setDeciding(true);
+      try {
+        await operationApi.decideAml(selectedOp.id, decision, decisionComment, pin);
+        toast.success(
+          decision === 'APPROUVER' 
+            ? "Opération libérée et ré-insérée dans le workflow." 
+            : "Opération bloquée et rejetée définitivement."
+        );
+        setSelectedOp(null);
+        setDecisionComment('');
+        fetchSuspendedQueue();
+      } catch (err) {
+        toast.error("Erreur de soumission de la décision.");
+      } finally {
+        setDeciding(false);
+      }
+    });
   };
 
   // Source CRUD Handlers
@@ -845,6 +859,12 @@ export default function AmlDashboardPage() {
         </div>
       )}
 
+      {/* Reusable PIN Modal */}
+      <PinValidationModal
+        isOpen={showPinModal}
+        onClose={() => setShowPinModal(false)}
+        onConfirm={pinCallback}
+      />
     </div>
   );
 }

@@ -49,4 +49,8 @@ public class OperationDto {
     private String creePar;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    // Blockchain
+    private String previousHash;
+    private String hash;
 }

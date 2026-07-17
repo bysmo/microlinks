@@ -238,6 +238,11 @@
       "lastName": "Plateforme",
       "enabled": true,
       "emailVerified": true,
+      "attributes": {
+        "security_pin": [
+          "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4"
+        ]
+      },
       "credentials": [
         {
           "type": "password",
@@ -262,6 +267,9 @@
         ],
         "institution_nom": [
           "MesoFinance de l'Ouest"
+        ],
+        "security_pin": [
+          "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4"
         ]
       },
       "credentials": [
@@ -288,6 +296,9 @@
         ],
         "institution_nom": [
           "MesoFinance de l'Ouest"
+        ],
+        "security_pin": [
+          "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4"
         ]
       },
       "credentials": [
@@ -314,6 +325,9 @@
         ],
         "institution_nom": [
           "MesoFinance de l'Ouest"
+        ],
+        "security_pin": [
+          "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4"
         ]
       },
       "credentials": [
@@ -340,6 +354,9 @@
         ],
         "institution_nom": [
           "Banque Atlantique Ouest"
+        ],
+        "security_pin": [
+          "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4"
         ]
       },
       "credentials": [
@@ -366,6 +383,9 @@
         ],
         "institution_nom": [
           "Banque Atlantique Ouest"
+        ],
+        "security_pin": [
+          "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4"
         ]
       },
       "credentials": [
@@ -392,6 +412,9 @@
         ],
         "institution_nom": [
           "Banque Atlantique Ouest"
+        ],
+        "security_pin": [
+          "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4"
         ]
       },
       "credentials": [
@@ -426,7 +449,7 @@
         "subComponents": {},
         "config": {
           "kc.user.profile.config": [
-            "{\"unmanagedAttributePolicy\":\"ENABLED\",\"attributes\":[{\"name\":\"username\",\"displayName\":\"${username}\",\"validations\":{\"length\":{\"min\":3,\"max\":255},\"username-prohibited-characters\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\"]}},{\"name\":\"email\",\"displayName\":\"${email}\",\"validations\":{\"email\":{},\"length\":{\"max\":255}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"firstName\",\"displayName\":\"${firstName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"lastName\",\"displayName\":\"${lastName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"institution_id\",\"displayName\":\"Institution ID\",\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\"]}},{\"name\":\"institution_nom\",\"displayName\":\"Institution Nom\",\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\"]}}]}"
+            "{\"unmanagedAttributePolicy\":\"ENABLED\",\"attributes\":[{\"name\":\"username\",\"displayName\":\"${username}\",\"validations\":{\"length\":{\"min\":3,\"max\":255},\"username-prohibited-characters\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\"]}},{\"name\":\"email\",\"displayName\":\"${email}\",\"validations\":{\"email\":{},\"length\":{\"max\":255}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"firstName\",\"displayName\":\"${firstName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"lastName\",\"displayName\":\"${lastName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"institution_id\",\"displayName\":\"Institution ID\",\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\"]}},{\"name\":\"institution_nom\",\"displayName\":\"Institution Nom\",\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\"]}},{\"name\":\"security_pin\",\"displayName\":\"Security PIN\",\"permissions\":{\"view\":[\"admin\"],\"edit\":[\"admin\",\"user\"]}}]}"
           ]
         }
       }

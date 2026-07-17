@@ -4,16 +4,14 @@ import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
 import lombok.extern.slf4j.Slf4j;
 import java.math.BigDecimal;
-import java.util.Base64;
-import javax.crypto.Cipher;
-import javax.crypto.spec.SecretKeySpec;
 
+/**
+ * Convertisseur JPA pour chiffrer et déchiffrer les montants (BigDecimal)
+ * en base de données à l'aide d'AES-256-GCM.
+ */
 @Converter
 @Slf4j
 public class MontantEncryptionConverter implements AttributeConverter<BigDecimal, String> {
-
-    private static final String ALGORITHM = "AES";
-    private static final byte[] KEY = "MicroLinksSec#26".getBytes();
 
     @Override
     public String convertToDatabaseColumn(BigDecimal attribute) {
@@ -21,14 +19,10 @@ public class MontantEncryptionConverter implements AttributeConverter<BigDecimal
             return null;
         }
         try {
-            Cipher cipher = Cipher.getInstance(ALGORITHM);
-            SecretKeySpec secretKeySpec = new SecretKeySpec(KEY, ALGORITHM);
-            cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec);
-            byte[] encryptedBytes = cipher.doFinal(attribute.toPlainString().getBytes());
-            return Base64.getEncoder().encodeToString(encryptedBytes);
+            return EncryptionUtils.encrypt(attribute.toPlainString());
         } catch (Exception e) {
-            log.error("Failed to encrypt amount value", e);
-            throw new RuntimeException("Error encrypting amount", e);
+            log.error("Échec du chiffrement du montant", e);
+            throw new RuntimeException("Erreur de chiffrement du montant", e);
         }
     }
 
@@ -38,18 +32,15 @@ public class MontantEncryptionConverter implements AttributeConverter<BigDecimal
             return null;
         }
         try {
-            Cipher cipher = Cipher.getInstance(ALGORITHM);
-            SecretKeySpec secretKeySpec = new SecretKeySpec(KEY, ALGORITHM);
-            cipher.init(Cipher.DECRYPT_MODE, secretKeySpec);
-            byte[] decryptedBytes = cipher.doFinal(Base64.getDecoder().decode(dbData));
-            return new BigDecimal(new String(decryptedBytes));
+            String decrypted = EncryptionUtils.decrypt(dbData);
+            return new BigDecimal(decrypted);
         } catch (Exception e) {
-            // Fallback: If it's not base64 or not encrypted, try parsing it directly as a number
+            // Fallback en cas d'ancienne valeur non chiffrée ou parse direct
             try {
                 return new BigDecimal(dbData);
             } catch (NumberFormatException nfe) {
-                log.error("Failed to decrypt or parse decimal value: " + dbData, e);
-                throw new RuntimeException("Error decrypting amount", e);
+                log.error("Échec du déchiffrement ou du parsing décimal pour: " + dbData, e);
+                throw new RuntimeException("Erreur de déchiffrement du montant", e);
             }
         }
     }

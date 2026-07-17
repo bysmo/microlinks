@@ -10,5 +10,6 @@
     <include file="db/changelog/v1/004-add-security-columns.xml"/>
     <include file="db/changelog/v1/005-create-aml-tables.xml"/>
     <include file="db/changelog/v1/006-add-aml-country-and-sources.xml"/>
+    <include file="db/changelog/v1/007-add-blockchain-and-tenant-columns.xml"/>
 
 </databaseChangeLog>

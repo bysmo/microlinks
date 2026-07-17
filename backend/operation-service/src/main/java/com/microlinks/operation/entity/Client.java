@@ -4,14 +4,26 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.Filter;
+import org.hibernate.annotations.FilterDef;
+import org.hibernate.annotations.ParamDef;
+import com.microlinks.operation.config.SensitiveStringConverter;
+
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+/**
+ * Représente un client d'une institution (donneur d'ordre ou bénéficiaire).
+ * Données chiffrées (FLE) et cloisonnées par tenant.
+ */
 @Entity
 @Table(name = "clients", indexes = {
     @Index(name = "idx_client_numero_compte", columnList = "numero_compte"),
-    @Index(name = "idx_client_institution", columnList = "institution_id")
+    @Index(name = "idx_client_institution", columnList = "institution_id"),
+    @Index(name = "idx_client_tenant", columnList = "tenant_id")
 })
+@FilterDef(name = "tenantFilter", parameters = @ParamDef(name = "tenantId", type = String.class))
+@Filter(name = "tenantFilter", condition = "tenant_id = cast(:tenantId as uuid)")
 @Data
 @Builder
 @NoArgsConstructor
@@ -22,16 +34,23 @@ public class Client {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "numero_compte", nullable = false, length = 50)
+    @Column(name = "tenant_id")
+    private UUID tenantId;
+
+    @Convert(converter = SensitiveStringConverter.class)
+    @Column(name = "numero_compte", nullable = false, length = 255)
     private String numeroCompte;
 
-    @Column(name = "nom_complet", nullable = false, length = 200)
+    @Convert(converter = SensitiveStringConverter.class)
+    @Column(name = "nom_complet", nullable = false, length = 255)
     private String nomComplet;
 
-    @Column(name = "prenom", length = 100)
+    @Convert(converter = SensitiveStringConverter.class)
+    @Column(name = "prenom", length = 255)
     private String prenom;
 
-    @Column(name = "nom", length = 100)
+    @Convert(converter = SensitiveStringConverter.class)
+    @Column(name = "nom", length = 255)
     private String nom;
 
     @Column(name = "institution_id", nullable = false)
@@ -43,10 +62,12 @@ public class Client {
     @Column(name = "type_compte", length = 30)
     private String typeCompte;
 
-    @Column(name = "telephone", length = 30)
+    @Convert(converter = SensitiveStringConverter.class)
+    @Column(name = "telephone", length = 255)
     private String telephone;
 
-    @Column(name = "email", length = 200)
+    @Convert(converter = SensitiveStringConverter.class)
+    @Column(name = "email", length = 255)
     private String email;
 
     @Enumerated(EnumType.STRING)

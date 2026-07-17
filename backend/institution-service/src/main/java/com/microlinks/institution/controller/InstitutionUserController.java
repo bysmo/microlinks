@@ -91,6 +91,27 @@ public class InstitutionUserController {
         return ResponseEntity.noContent().build();
     }
 
+
+
+    @PutMapping("/me/pin")
+    @Operation(summary = "Mettre à jour son propre code PIN de sécurité")
+    public ResponseEntity<Void> updateMyPin(
+            @PathVariable UUID institutionId,
+            @RequestParam String pin,
+            @AuthenticationPrincipal Jwt jwt) {
+        
+        validateAccess(institutionId, jwt);
+        
+        // Validation du format du code PIN : 4 à 6 chiffres
+        if (pin == null || !pin.matches("^[0-9]{4,6}$")) {
+            throw new BusinessException("Le code PIN doit être composé de 4 à 6 chiffres");
+        }
+        
+        String userId = jwt.getSubject();
+        keycloakProvisioningService.updateUserPin(userId, pin);
+        return ResponseEntity.noContent().build();
+    }
+
     private void validateAccess(UUID institutionId, Jwt jwt) {
         String userInstitutionId = jwt.getClaimAsString("institution_id");
         if (userInstitutionId == null) {

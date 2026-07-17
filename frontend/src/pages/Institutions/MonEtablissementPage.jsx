@@ -290,10 +290,32 @@ export default function MonEtablissementPage() {
   const [compteModal, setCompteModal] = useState({ open: false, compte: null });
 
   // Gestion des utilisateurs / collaborateurs
-  const [activeTab, setActiveTab] = useState('settings'); // 'settings' ou 'users'
+  const [activeTab, setActiveTab] = useState('settings'); // 'settings', 'users' ou 'security'
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [userModalOpen, setUserModalOpen] = useState(false);
+
+  const [newPin, setNewPin] = useState('');
+  const [savingPin, setSavingPin] = useState(false);
+
+  const handleUpdatePin = async (e) => {
+    e.preventDefault();
+    if (!newPin || !/^[0-9]{4,6}$/.test(newPin)) {
+      toast.error("Le code PIN doit comporter entre 4 et 6 chiffres.");
+      return;
+    }
+    setSavingPin(true);
+    try {
+      await userApi.updateMyPin(instId, newPin);
+      toast.success("Votre code PIN de sécurité a été mis à jour avec succès !");
+      setNewPin('');
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message;
+      toast.error(`Erreur de mise à jour du PIN : ${msg}`);
+    } finally {
+      setSavingPin(false);
+    }
+  };
 
   const loadUsers = useCallback(async (id) => {
     if (!id) return;
@@ -377,13 +399,21 @@ export default function MonEtablissementPage() {
           const res = await institutionApi.findByCode(sigle);
           data = res.data; resolvedId = data?.id;
         } catch (_) {
-          const listRes = await institutionApi.findAll({ search: sigle, size: 5 });
-          const found = (listRes.data?.content || []).find(
-            i => i.sigle?.toUpperCase() === sigle || i.code?.toUpperCase() === sigle
-          );
-          if (found) { data = found; resolvedId = found.id; }
+          try {
+            const listRes = await institutionApi.findAll({ size: 100 });
+            const cleanSigle = sigle.toLowerCase().replace(/[^a-z0-9]/g, "");
+            const found = (listRes.data?.content || []).find(i => {
+              const normSigle = (i.sigle || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+              const normCode = (i.code || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+              return normSigle === cleanSigle || normCode === cleanSigle;
+            });
+            if (found) { data = found; resolvedId = found.id; }
+          } catch (e2) {
+            console.warn('Fallback list search failed:', e2.message);
+          }
         }
       }
+
 
       if (!data) {
         toast.error("Votre compte n'est rattaché à aucune institution connue.");
@@ -577,9 +607,19 @@ export default function MonEtablissementPage() {
         >
           Collaborateurs & Utilisateurs
         </button>
+        <button
+          onClick={() => setActiveTab('security')}
+          className={`pb-3 text-sm font-semibold border-b-2 transition-all ${
+            activeTab === 'security'
+              ? 'text-primary-400 border-primary-400'
+              : 'text-dark-400 border-transparent hover:text-white'
+          }`}
+        >
+          Sécurité & Code PIN
+        </button>
       </div>
 
-      {activeTab === 'settings' ? (
+      {activeTab === 'settings' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* ─── Left Column ──────────────────────────────────────────────────── */}
         <div className="lg:col-span-2 space-y-6">
@@ -801,7 +841,9 @@ export default function MonEtablissementPage() {
           </div>
         </div>
       </div>
-      ) : (
+      )}
+
+      {activeTab === 'users' && (
         <div className="glass-card p-6 space-y-6">
           <div className="flex items-center justify-between border-b border-white/5 pb-4">
             <div className="flex items-center gap-3">
@@ -911,6 +953,55 @@ export default function MonEtablissementPage() {
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {activeTab === 'security' && (
+        <div className="glass-card p-6 max-w-xl mx-auto space-y-6">
+          <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+            <div className="w-10 h-10 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+              <Lock className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-white font-semibold text-base">Sécurité & Code PIN de Validation</h2>
+              <p className="text-dark-400 text-xs mt-0.5">
+                Configurez votre code PIN personnel requis pour valider les opérations financières de MicroLinks.
+              </p>
+            </div>
+          </div>
+
+          <form onSubmit={handleUpdatePin} className="space-y-5">
+            <div className="space-y-2">
+              <label className="block text-dark-300 text-sm font-semibold" htmlFor="new-pin-input">
+                Nouveau Code PIN de Sécurité
+              </label>
+              <input
+                id="new-pin-input"
+                type="password"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={6}
+                placeholder="4 à 6 chiffres"
+                value={newPin}
+                onChange={(e) => setNewPin(e.target.value.replace(/[^0-9]/g, ''))}
+                className="w-full bg-dark-800/60 border border-dark-600 rounded-lg px-3 py-2.5 text-white text-base font-mono tracking-widest focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30 transition-all placeholder:tracking-normal placeholder:font-sans placeholder:text-sm"
+              />
+              <p className="text-xs text-dark-400">
+                Saisissez un code PIN de 4 à 6 chiffres. Ce code vous sera demandé à chaque validation ou signature de transaction financière.
+              </p>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                type="submit"
+                disabled={savingPin || newPin.length < 4}
+                className="btn-primary px-5 py-2 flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors border-none shadow-lg shadow-emerald-900/20"
+              >
+                {savingPin ? <RefreshCw className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+                Enregistrer le code PIN
+              </button>
+            </div>
+          </form>
         </div>
       )}
 

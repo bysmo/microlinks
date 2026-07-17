@@ -9,6 +9,7 @@ import DataTable from '../../components/common/DataTable';
 import {
   factureApi,
 } from '../../services/api';
+import PinValidationModal from '../../components/common/PinValidationModal';
 
 const fmtMontant = (v, devise) =>
   v == null ? '—' : `${Number(v).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} ${devise || ''}`;
@@ -200,91 +201,118 @@ function PaiementModal({ facture, onClose, onDone }) {
   });
   const [saving, setSaving] = useState(false);
 
-  const submit = async (e) => {
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pinCallback, setPinCallback] = useState(null);
+
+  const executeWithPin = (actionFn) => {
+    setPinCallback(() => async (pin) => {
+      setShowPinModal(false);
+      await actionFn(pin);
+    });
+    setShowPinModal(true);
+  };
+
+  const submit = (e) => {
     e.preventDefault();
-    setSaving(true);
-    try {
-      await factureApi.payer(facture.id, form);
-      toast.success('Paiement enregistré avec succès');
-      onDone();
-    } catch (err) {
-      toast.error("Erreur lors de l'enregistrement du paiement");
-    } finally {
-      setSaving(false);
-    }
+    executeWithPin(async (pin) => {
+      setSaving(true);
+      try {
+        await factureApi.payer(facture.id, form, pin);
+        toast.success('Paiement enregistré avec succès');
+        onDone();
+      } catch (err) {
+        toast.error("Erreur lors de l'enregistrement du paiement");
+      } finally {
+        setSaving(false);
+      }
+    });
   };
 
   return (
-    <Modal
-      isOpen
-      onClose={onClose}
-      id="paiement-modal"
-      title={`Enregistrer un paiement — Facture N° ${facture.numero}`}
-      footer={(
-        <>
-          <button type="button" onClick={onClose} className="btn-secondary">Annuler</button>
-          <button form="form-paiement" type="submit" disabled={saving} className="btn-primary flex items-center gap-2">
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />} Enregistrer
-          </button>
-        </>
-      )}
-    >
-      <form id="form-paiement" onSubmit={submit} className="grid grid-cols-2 gap-4">
-        <div className="form-group col-span-2">
-          <label className="block text-sm font-medium text-dark-300 mb-1">Montant ({facture.devise})</label>
-          <input
-            type="number"
-            step="0.01"
-            className="form-control w-full"
-            required
-            value={form.montant}
-            onChange={(e) => setForm({ ...form, montant: e.target.value })}
-          />
-          <p className="text-xs text-dark-500 mt-1">Total facture : {fmtMontant(facture.montantTotal, facture.devise)} · Déjà payé : {fmtMontant(facture.montantPaye || 0, facture.devise)}</p>
-        </div>
-        <div className="form-group">
-          <label className="block text-sm font-medium text-dark-300 mb-1">Date du paiement</label>
-          <input
-            type="date"
-            className="form-control w-full"
-            value={form.datePaiement}
-            onChange={(e) => setForm({ ...form, datePaiement: e.target.value })}
-          />
-        </div>
-        <div className="form-group">
-          <label className="block text-sm font-medium text-dark-300 mb-1">Moyen de paiement</label>
-          <select
-            className="form-control w-full"
-            value={form.moyenPaiement}
-            onChange={(e) => setForm({ ...form, moyenPaiement: e.target.value })}
-          >
-            <option value="VIREMENT">Virement bancaire</option>
-            <option value="CHEQUE">Chèque</option>
-            <option value="ESPECES">Espèces</option>
-            <option value="MOBILE_MONEY">Mobile Money</option>
-          </select>
-        </div>
-        <div className="form-group col-span-2">
-          <label className="block text-sm font-medium text-dark-300 mb-1">Référence Transaction</label>
-          <input
-            type="text"
-            className="form-control w-full"
-            value={form.reference}
-            placeholder="N° de virement, chèque..."
-            onChange={(e) => setForm({ ...form, reference: e.target.value })}
-          />
-        </div>
-        <div className="form-group col-span-2">
-          <label className="block text-sm font-medium text-dark-300 mb-1">Commentaire</label>
-          <textarea
-            className="form-control w-full"
-            rows={2}
-            value={form.commentaire}
-            onChange={(e) => setForm({ ...form, commentaire: e.target.value })}
-          />
-        </div>
-      </form>
-    </Modal>
+    <>
+      <Modal
+        isOpen
+        onClose={onClose}
+        id="paiement-modal"
+        title={`Enregistrer un paiement — Facture N° ${facture.numero}`}
+        footer={(
+          <>
+            <button type="button" onClick={onClose} className="btn-secondary">Annuler</button>
+            <button
+              type="button"
+              onClick={submit}
+              disabled={saving}
+              className="btn-primary"
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
+              Enregistrer le paiement
+            </button>
+          </>
+        )}
+      >
+        <form onSubmit={submit} className="grid grid-cols-2 gap-4">
+          <div className="form-group col-span-2">
+            <label className="block text-sm font-medium text-dark-300 mb-1">Montant à régler ({facture.devise})</label>
+            <input
+              type="number"
+              step="0.01"
+              required
+              className="form-control w-full text-lg font-semibold text-white bg-dark-800"
+              value={form.montant}
+              onChange={(e) => setForm({ ...form, montant: e.target.value })}
+            />
+          </div>
+          <div className="form-group">
+            <label className="block text-sm font-medium text-dark-300 mb-1">Date Paiement</label>
+            <input
+              type="date"
+              required
+              className="form-control w-full text-white bg-dark-800"
+              value={form.datePaiement}
+              onChange={(e) => setForm({ ...form, datePaiement: e.target.value })}
+            />
+          </div>
+          <div className="form-group">
+            <label className="block text-sm font-medium text-dark-300 mb-1">Moyen Paiement</label>
+            <select
+              className="form-control w-full bg-dark-800 text-white"
+              value={form.moyenPaiement}
+              onChange={(e) => setForm({ ...form, moyenPaiement: e.target.value })}
+            >
+              <option value="VIREMENT">Virement bancaire</option>
+              <option value="CHEQUE">Chèque</option>
+              <option value="ESPECES">Espèces</option>
+              <option value="MOBILE_MONEY">Mobile Money</option>
+            </select>
+          </div>
+          <div className="form-group col-span-2">
+            <label className="block text-sm font-medium text-dark-300 mb-1">Référence Transaction</label>
+            <input
+              type="text"
+              className="form-control w-full"
+              value={form.reference}
+              placeholder="N° de virement, chèque..."
+              onChange={(e) => setForm({ ...form, reference: e.target.value })}
+            />
+          </div>
+          <div className="form-group col-span-2">
+            <label className="block text-sm font-medium text-dark-300 mb-1">Commentaire</label>
+            <textarea
+              className="form-control w-full"
+              rows={2}
+              value={form.commentaire}
+              onChange={(e) => setForm({ ...form, commentaire: e.target.value })}
+            />
+          </div>
+        </form>
+      </Modal>
+
+      <PinValidationModal
+        isOpen={showPinModal}
+        onClose={() => setShowPinModal(false)}
+        onConfirm={pinCallback}
+      />
+    </>
   );
 }
 

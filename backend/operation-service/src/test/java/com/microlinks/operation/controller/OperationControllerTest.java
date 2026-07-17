@@ -61,6 +61,9 @@ public class OperationControllerTest {
     @MockBean
     private JwtDecoder jwtDecoder;
 
+    @MockBean
+    private com.microlinks.operation.client.PinValidationClient pinValidationClient;
+
     private UUID operationId;
     private OperationDto operationDto;
 
@@ -109,6 +112,7 @@ public class OperationControllerTest {
         req.setNomBeneficiaire("Marie Konan");
 
         when(operationService.create(any(), any(), any(), any())).thenReturn(operationDto);
+        when(pinValidationClient.validatePin(any(), any())).thenReturn(true);
 
         mockMvc.perform(post("/api/v1/operations")
                         .with(jwt()
@@ -118,6 +122,7 @@ public class OperationControllerTest {
                                         .claim("name", "John Agent")
                                 )
                         )
+                        .header("X-Validation-PIN", "1234")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isCreated())

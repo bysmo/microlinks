@@ -82,16 +82,19 @@ export function AuthProvider({ children }) {
                     console.log('institution_id récupéré via API (code):', institutionId);
                   }
                 } catch (_) {
-                  // Si échec, essayer de rechercher dans la liste par sigle
+                  // Si échec, essayer de rechercher dans la liste en comparant les codes/sigles normalisés
                   try {
-                    const listRes = await institutionApi.findAll({ search: sigle, size: 5 });
-                    const found = (listRes.data?.content || []).find(
-                      i => i.sigle?.toUpperCase() === sigle || i.code?.toUpperCase() === sigle
-                    );
+                    const listRes = await institutionApi.findAll({ size: 100 });
+                    const cleanSigle = sigle.toLowerCase().replace(/[^a-z0-9]/g, "");
+                    const found = (listRes.data?.content || []).find(i => {
+                      const normSigle = (i.sigle || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+                      const normCode = (i.code || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+                      return normSigle === cleanSigle || normCode === cleanSigle;
+                    });
                     if (found) {
                       institutionId = found.id;
                       institutionNom = found.nom;
-                      console.log('institution_id récupéré via recherche liste:', institutionId);
+                      console.log('institution_id récupéré via recherche liste (normalisé):', institutionId);
                     }
                   } catch (e2) {
                     console.warn('Impossible de récupérer institution via liste:', e2.message);
@@ -103,6 +106,7 @@ export function AuthProvider({ children }) {
             console.warn('Impossible de récupérer institution via API:', e.message);
           }
         }
+
 
         setUser({
           id: tokenParsed?.sub,

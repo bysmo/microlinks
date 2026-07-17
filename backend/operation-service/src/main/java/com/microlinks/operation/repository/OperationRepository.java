@@ -19,6 +19,8 @@ public interface OperationRepository extends JpaRepository<Operation, UUID> {
 
     Optional<Operation> findByReferenceUnique(String reference);
 
+    Optional<Operation> findFirstByOrderByCreatedAtDesc();
+
     @Query("""
         SELECT o FROM Operation o
         WHERE (cast(:search as string) IS NULL OR

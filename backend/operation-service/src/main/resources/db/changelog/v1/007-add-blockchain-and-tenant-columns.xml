@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="op-007-add-blockchain-and-tenant-columns" author="microlinks">
+        <!-- 1. Ajouter tenant_id, previous_hash et hash sur operations -->
+        <addColumn tableName="operations">
+            <column name="tenant_id" type="UUID"/>
+            <column name="previous_hash" type="VARCHAR(64)"/>
+            <column name="hash" type="VARCHAR(64)"/>
+        </addColumn>
+
+        <!-- Indexer tenant_id -->
+        <createIndex tableName="operations" indexName="idx_op_tenant">
+            <column name="tenant_id"/>
+        </createIndex>
+
+        <!-- 2. Ajouter tenant_id sur clients -->
+        <addColumn tableName="clients">
+            <column name="tenant_id" type="UUID"/>
+        </addColumn>
+
+        <!-- Indexer tenant_id -->
+        <createIndex tableName="clients" indexName="idx_client_tenant">
+            <column name="tenant_id"/>
+        </createIndex>
+
+        <!-- 3. Redimensionner les colonnes de l'entité Operation chiffrées par FLE -->
+        <modifyDataType tableName="operations" columnName="compte_donneur_ordre" newDataType="VARCHAR(255)"/>
+        <modifyDataType tableName="operations" columnName="nom_donneur_ordre" newDataType="VARCHAR(255)"/>
+        <modifyDataType tableName="operations" columnName="compte_correspondance_emetteur" newDataType="VARCHAR(255)"/>
+        <modifyDataType tableName="operations" columnName="compte_beneficiaire" newDataType="VARCHAR(255)"/>
+        <modifyDataType tableName="operations" columnName="nom_beneficiaire" newDataType="VARCHAR(255)"/>
+        <modifyDataType tableName="operations" columnName="compte_correspondance_recepteur" newDataType="VARCHAR(255)"/>
+        <modifyDataType tableName="operations" columnName="numero_cheque" newDataType="VARCHAR(255)"/>
+
+        <!-- 4. Redimensionner les colonnes de l'entité Client chiffrées par FLE -->
+        <modifyDataType tableName="clients" columnName="numero_compte" newDataType="VARCHAR(255)"/>
+        <modifyDataType tableName="clients" columnName="nom_complet" newDataType="VARCHAR(255)"/>
+        <modifyDataType tableName="clients" columnName="prenom" newDataType="VARCHAR(255)"/>
+        <modifyDataType tableName="clients" columnName="nom" newDataType="VARCHAR(255)"/>
+        <modifyDataType tableName="clients" columnName="telephone" newDataType="VARCHAR(255)"/>
+        <modifyDataType tableName="clients" columnName="email" newDataType="VARCHAR(255)"/>
+    </changeSet>
+</databaseChangeLog>

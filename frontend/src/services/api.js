@@ -71,6 +71,7 @@ export const userApi = {
   findAll: (institutionId) => api.get(`/api/v1/institutions/${institutionId}/users`),
   create: (institutionId, data) => api.post(`/api/v1/institutions/${institutionId}/users`, data),
   updateStatus: (institutionId, userId, enabled) => api.patch(`/api/v1/institutions/${institutionId}/users/${userId}/status`, null, { params: { enabled } }),
+  updateMyPin: (institutionId, pin) => api.put(`/api/v1/institutions/${institutionId}/users/me/pin`, null, { params: { pin } }),
 };
 
 // ======================== ZONES MONETAIRES ========================
@@ -86,12 +87,15 @@ export const operationApi = {
   findById: (id) => api.get(`/api/v1/operations/${id}`),
   findByReference: (ref) => api.get(`/api/v1/operations/reference/${ref}`),
   getHistorique: (id) => api.get(`/api/v1/operations/${id}/historique`),
-  create: (data) => api.post('/api/v1/operations', data),
-  soumettre: (id, commentaire) => api.post(`/api/v1/operations/${id}/soumettre`, { commentaire }),
-  valider: (id, nouveauStatut, commentaire) =>
-    api.post(`/api/v1/operations/${id}/valider`, { commentaire }, { params: { nouveauStatut } }),
-  rejeter: (id, motif) => api.post(`/api/v1/operations/${id}/rejeter`, { motif }),
-  annuler: (id, motif) => api.post(`/api/v1/operations/${id}/annuler`, { motif }),
+  create: (data, pin) => api.post('/api/v1/operations', data, pin ? { headers: { 'X-Validation-PIN': pin } } : {}),
+  soumettre: (id, commentaire, pin) => api.post(`/api/v1/operations/${id}/soumettre`, { commentaire }, pin ? { headers: { 'X-Validation-PIN': pin } } : {}),
+  valider: (id, nouveauStatut, commentaire, pin) =>
+    api.post(`/api/v1/operations/${id}/valider`, { commentaire }, { 
+      params: { nouveauStatut }, 
+      headers: pin ? { 'X-Validation-PIN': pin } : {} 
+    }),
+  rejeter: (id, motif, pin) => api.post(`/api/v1/operations/${id}/rejeter`, { motif }, pin ? { headers: { 'X-Validation-PIN': pin } } : {}),
+  annuler: (id, motif, pin) => api.post(`/api/v1/operations/${id}/annuler`, { motif }, pin ? { headers: { 'X-Validation-PIN': pin } } : {}),
   getStats: () => api.get('/api/v1/operations/stats'),
   securityScan: () => api.get('/api/v1/operations/security/scan'),
   getSanctions: () => api.get('/api/v1/operations/aml/sanctions'),
@@ -100,7 +104,7 @@ export const operationApi = {
   }),
   syncSanctionsWeb: (url) => api.post('/api/v1/operations/aml/sanctions/sync-web', null, { params: url ? { url } : {} }),
   getSuspendedAml: (params) => api.get('/api/v1/operations/aml/suspended', { params }),
-  decideAml: (id, decision, commentaire) => api.post(`/api/v1/operations/aml/${id}/decision`, { decision, commentaire }),
+  decideAml: (id, decision, commentaire, pin) => api.post(`/api/v1/operations/aml/${id}/decision`, { decision, commentaire }, pin ? { headers: { 'X-Validation-PIN': pin } } : {}),
   getAmlSources: () => api.get('/api/v1/operations/aml/sources'),
   createAmlSource: (data) => api.post('/api/v1/operations/aml/sources', data),
   updateAmlSource: (id, data) => api.put(`/api/v1/operations/aml/sources/${id}`, data),
@@ -135,7 +139,7 @@ export const factureApi = {
   findById: (id) => api.get(`/api/v1/factures/${id}`),
   getPaiements: (id) => api.get(`/api/v1/factures/${id}/paiements`),
   generer: (periode) => api.post('/api/v1/factures/generer', null, { params: periode ? { periode } : {} }),
-  payer: (id, data) => api.post(`/api/v1/factures/${id}/paiement`, data),
+  payer: (id, data, pin) => api.post(`/api/v1/factures/${id}/paiement`, data, pin ? { headers: { 'X-Validation-PIN': pin } } : {}),
   annuler: (id) => api.post(`/api/v1/factures/${id}/annuler`),
   traiterRetards: () => api.post('/api/v1/factures/traiter-retards'),
 };

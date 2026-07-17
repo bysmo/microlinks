@@ -5,6 +5,7 @@ import com.microlinks.operation.entity.StatutOperation;
 import com.microlinks.operation.repository.HistoriqueStatutRepository;
 import com.microlinks.operation.service.OperationService;
 import com.microlinks.operation.service.AmlService;
+import com.microlinks.operation.client.PinValidationClient;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -20,6 +21,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Contrôleur REST exposant les opérations financières de MicroLinks.
+ * Sécurisé par rôles Keycloak et vérification systématique de code PIN pour les écritures.
+ */
 @RestController
 @RequestMapping("/api/v1/operations")
 @RequiredArgsConstructor
@@ -30,6 +35,7 @@ public class OperationController {
     private final OperationService operationService;
     private final HistoriqueStatutRepository historiqueRepository;
     private final AmlService amlService;
+    private final PinValidationClient pinValidationClient;
 
     @GetMapping
     @Operation(summary = "Lister les opérations avec filtres et pagination")
@@ -102,7 +108,9 @@ public class OperationController {
     @PreAuthorize("hasAnyRole('AGENT_SAISIE', 'AGENT_VALIDATION', 'ADMIN_INSTITUTION', 'ADMIN_PLATEFORME')")
     public ResponseEntity<OperationDto> create(
             @Valid @RequestBody OperationCreateRequest request,
+            @RequestHeader(name = "X-Validation-PIN", required = false) String pin,
             @AuthenticationPrincipal Jwt jwt) {
+        validateUserPin(jwt, pin);
         UUID institutionId = extractInstitutionId(jwt);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(operationService.create(request, jwt.getSubject(),
@@ -115,7 +123,9 @@ public class OperationController {
     public ResponseEntity<OperationDto> soumettre(
             @PathVariable UUID id,
             @RequestBody(required = false) Map<String, String> body,
+            @RequestHeader(name = "X-Validation-PIN", required = false) String pin,
             @AuthenticationPrincipal Jwt jwt) {
+        validateUserPin(jwt, pin);
         String commentaire = body != null ? body.get("commentaire") : null;
         return ResponseEntity.ok(operationService.soumettre(id, commentaire,
                 jwt.getSubject(), jwt.getClaimAsString("name"), extractInstitutionId(jwt)));
@@ -128,7 +138,9 @@ public class OperationController {
             @PathVariable UUID id,
             @RequestParam StatutOperation nouveauStatut,
             @RequestBody(required = false) Map<String, String> body,
+            @RequestHeader(name = "X-Validation-PIN", required = false) String pin,
             @AuthenticationPrincipal Jwt jwt) {
+        validateUserPin(jwt, pin);
         String commentaire = body != null ? body.get("commentaire") : null;
         return ResponseEntity.ok(operationService.valider(id, nouveauStatut, commentaire,
                 jwt.getSubject(), jwt.getClaimAsString("name"), extractInstitutionId(jwt)));
@@ -140,7 +152,9 @@ public class OperationController {
     public ResponseEntity<OperationDto> rejeter(
             @PathVariable UUID id,
             @RequestBody Map<String, String> body,
+            @RequestHeader(name = "X-Validation-PIN", required = false) String pin,
             @AuthenticationPrincipal Jwt jwt) {
+        validateUserPin(jwt, pin);
         return ResponseEntity.ok(operationService.rejeter(id,
                 body.getOrDefault("motif", "Rejet sans motif"),
                 jwt.getSubject(), jwt.getClaimAsString("name"), extractInstitutionId(jwt)));
@@ -151,7 +165,9 @@ public class OperationController {
     public ResponseEntity<OperationDto> annuler(
             @PathVariable UUID id,
             @RequestBody(required = false) Map<String, String> body,
+            @RequestHeader(name = "X-Validation-PIN", required = false) String pin,
             @AuthenticationPrincipal Jwt jwt) {
+        validateUserPin(jwt, pin);
         return ResponseEntity.ok(operationService.annuler(id,
                 body != null ? body.get("motif") : null,
                 jwt.getSubject(), extractInstitutionId(jwt)));
@@ -226,7 +242,9 @@ public class OperationController {
     public ResponseEntity<OperationDto> decideAml(
             @PathVariable UUID id,
             @RequestBody Map<String, String> body,
+            @RequestHeader(name = "X-Validation-PIN", required = false) String pin,
             @AuthenticationPrincipal Jwt jwt) {
+        validateUserPin(jwt, pin);
         String decision = body.get("decision");
         String commentaire = body.get("commentaire");
         return ResponseEntity.ok(operationService.decideAml(id, decision, commentaire,
@@ -265,6 +283,18 @@ public class OperationController {
         return ResponseEntity.ok(Map.of("message", "Source supprimée avec succès"));
     }
 
+    /**
+     * Valide le code PIN de sécurité de l'utilisateur connecté auprès du service d'institution.
+     */
+    private void validateUserPin(Jwt jwt, String pin) {
+        if (pin == null || pin.isBlank()) {
+            throw new com.microlinks.operation.exception.WorkflowException("Code PIN de validation obligatoire pour cette opération financière.");
+        }
+        boolean isValid = pinValidationClient.validatePin(jwt.getSubject(), pin);
+        if (!isValid) {
+            throw new com.microlinks.operation.exception.WorkflowException("Code PIN de validation incorrect.");
+        }
+    }
 
     private UUID extractInstitutionId(Jwt jwt) {
         String institutionId = jwt.getClaimAsString("institution_id");

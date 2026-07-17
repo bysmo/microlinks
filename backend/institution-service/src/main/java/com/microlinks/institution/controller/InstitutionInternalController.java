@@ -32,6 +32,19 @@ import java.util.stream.Collectors;
 public class InstitutionInternalController {
 
     private final InstitutionRepository institutionRepository;
+    private final com.microlinks.institution.service.KeycloakProvisioningService keycloakProvisioningService;
+
+    /**
+     * Valide le code PIN d'un collaborateur interne.
+     * Consommé par les autres microservices (operation-service, billing-service).
+     */
+    @PostMapping("/users/{userId}/validate-pin")
+    public ResponseEntity<java.util.Map<String, Boolean>> validatePin(
+            @PathVariable String userId,
+            @RequestParam String pin) {
+        boolean isValid = keycloakProvisioningService.validateUserPin(userId, pin);
+        return ResponseEntity.ok(java.util.Map.of("valid", isValid));
+    }
 
     /**
      * Retourne les configurations SFTP complètes (avec credentials déchiffrés)

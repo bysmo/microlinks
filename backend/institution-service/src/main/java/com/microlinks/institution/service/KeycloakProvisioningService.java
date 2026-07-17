@@ -546,6 +546,9 @@ public class KeycloakProvisioningService {
         if (request.getPhone() != null && !request.getPhone().isBlank()) {
             attributes.put("telephone", List.of(request.getPhone()));
         }
+        if (request.getPin() != null && !request.getPin().isBlank()) {
+            attributes.put("security_pin", List.of(hashPin(request.getPin())));
+        }
         userJson.put("attributes", attributes);
 
         Map<String, Object> credential = new HashMap<>();
@@ -636,6 +639,122 @@ public class KeycloakProvisioningService {
             sb.append(chars.charAt(random.nextInt(chars.length())));
         }
         return sb.toString() + "A1!";
+    }
+
+    /**
+     * Valide le code PIN d'un utilisateur Keycloak.
+     *
+     * @param userId L'identifiant de l'utilisateur Keycloak.
+     * @param rawPin Le code PIN en clair fourni par l'utilisateur.
+     * @return true si le code PIN correspond au code enregistré, sinon false.
+     */
+    public boolean validateUserPin(String userId, String rawPin) {
+        String adminToken = getAdminToken();
+        if (adminToken == null) {
+            log.error("Impossible de valider le PIN : jeton admin Keycloak non disponible");
+            return false;
+        }
+
+        String userUrl = keycloakUrl + "/admin/realms/" + realm + "/users/" + userId;
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> user = restClient.get()
+                    .uri(userUrl)
+                    .header("Authorization", "Bearer " + adminToken)
+                    .retrieve()
+                    .body(Map.class);
+
+            if (user != null && user.containsKey("attributes")) {
+                @SuppressWarnings("unchecked")
+                Map<String, List<String>> attributes = (Map<String, List<String>>) user.get("attributes");
+                if (attributes != null && attributes.containsKey("security_pin")) {
+                    List<String> pins = attributes.get("security_pin");
+                    if (pins != null && !pins.isEmpty()) {
+                        String storedHashedPin = pins.get(0);
+                        String hashedInput = hashPin(rawPin);
+                        return storedHashedPin.equals(hashedInput);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("Erreur lors de la validation du code PIN de l'utilisateur {} dans Keycloak", userId, e);
+        }
+        return false;
+    }
+
+    /**
+     * Met à jour le code PIN d'un utilisateur Keycloak.
+     *
+     * @param userId L'identifiant de l'utilisateur Keycloak.
+     * @param rawPin Le nouveau code PIN en clair.
+     */
+    public void updateUserPin(String userId, String rawPin) {
+        String adminToken = getAdminToken();
+        if (adminToken == null) {
+            throw new RuntimeException("Impossible d'obtenir le jeton administrateur de Keycloak");
+        }
+
+        String userUrl = keycloakUrl + "/admin/realms/" + realm + "/users/" + userId;
+        try {
+            // Récupérer l'utilisateur pour préserver ses attributs existants
+            @SuppressWarnings("unchecked")
+            Map<String, Object> user = restClient.get()
+                    .uri(userUrl)
+                    .header("Authorization", "Bearer " + adminToken)
+                    .retrieve()
+                    .body(Map.class);
+
+            if (user == null) {
+                throw new RuntimeException("Utilisateur non trouvé dans Keycloak : " + userId);
+            }
+
+            @SuppressWarnings("unchecked")
+            Map<String, Object> attributes = user.containsKey("attributes") 
+                ? new HashMap<>((Map<String, Object>) user.get("attributes")) 
+                : new HashMap<>();
+
+            attributes.put("security_pin", List.of(hashPin(rawPin)));
+
+            Map<String, Object> updateJson = new HashMap<>();
+            updateJson.put("attributes", attributes);
+
+            restClient.put()
+                    .uri(userUrl)
+                    .header("Authorization", "Bearer " + adminToken)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(updateJson)
+                    .retrieve()
+                    .toBodilessEntity();
+            log.info("Code PIN de l'utilisateur Keycloak {} mis à jour avec succès", userId);
+        } catch (Exception e) {
+            log.error("Erreur lors de la mise à jour du code PIN de l'utilisateur ID {}: {}", userId, e.getMessage(), e);
+            throw new RuntimeException("Erreur de mise à jour du code PIN Keycloak : " + e.getMessage());
+        }
+    }
+
+    /**
+     * Hache le code PIN à l'aide de SHA-256.
+     *
+     * @param pin Le code PIN brut.
+     * @return La chaîne hexadécimale SHA-256 du code PIN.
+     */
+    public String hashPin(String pin) {
+        if (pin == null) {
+            return "";
+        }
+        try {
+            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(pin.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) hexString.append('0');
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (Exception e) {
+            throw new RuntimeException("Erreur lors du hachage du code PIN", e);
+        }
     }
 
     private void publishUserCreatedEvent(Institution institution, UserCreateRequest request, String tempPassword) {

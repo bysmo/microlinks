@@ -256,6 +256,9 @@ services:
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-KeycloakAdmin@2024#}
       EUREKA_SERVER_URL: http://discovery-service:8761/eureka/
       CONFIG_SERVER_URL: http://config-service:8888
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:-microlinks}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-RabbitMQ@2024}
     networks:
       - microlinks-net
     healthcheck:
@@ -272,6 +275,8 @@ services:
       postgres-institution:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
       keycloak:
         condition: service_started

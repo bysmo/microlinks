@@ -4,6 +4,7 @@ import com.microlinks.billing.dto.PaiementRequest;
 import com.microlinks.billing.entity.Facture;
 import com.microlinks.billing.entity.Paiement;
 import com.microlinks.billing.service.FactureService;
+import com.microlinks.billing.client.PinValidationClient;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -19,6 +20,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Contrôleur REST pour la gestion et la consultation des factures.
+ * Protégé par rôles Keycloak et vérification du PIN de sécurité pour les paiements.
+ */
 @RestController
 @RequestMapping("/api/v1/factures")
 @RequiredArgsConstructor
@@ -27,6 +32,7 @@ import java.util.UUID;
 public class FactureController {
 
     private final FactureService factureService;
+    private final PinValidationClient pinValidationClient;
 
     @GetMapping
     @Operation(summary = "Lister toutes les factures (admin plateforme)")
@@ -76,7 +82,9 @@ public class FactureController {
     @PreAuthorize("hasRole('ADMIN_PLATEFORME')")
     public ResponseEntity<Facture> payer(@PathVariable UUID id,
                                          @Valid @RequestBody PaiementRequest req,
+                                         @RequestHeader(name = "X-Validation-PIN", required = false) String pin,
                                          @AuthenticationPrincipal Jwt jwt) {
+        validateUserPin(jwt, pin);
         return ResponseEntity.ok(factureService.enregistrerPaiement(id, req, jwt.getSubject()));
     }
 
@@ -92,6 +100,19 @@ public class FactureController {
     public ResponseEntity<Void> traiterRetards() {
         factureService.traiterFacturesEnRetard();
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Valide le code PIN de sécurité de l'utilisateur connecté auprès du service d'institution.
+     */
+    private void validateUserPin(Jwt jwt, String pin) {
+        if (pin == null || pin.isBlank()) {
+            throw new RuntimeException("Code PIN de validation obligatoire pour cette opération financière.");
+        }
+        boolean isValid = pinValidationClient.validatePin(jwt.getSubject(), pin);
+        if (!isValid) {
+            throw new RuntimeException("Code PIN de validation incorrect.");
+        }
     }
 
     private UUID extractInstitutionId(Jwt jwt) {

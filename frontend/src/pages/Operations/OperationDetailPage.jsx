@@ -11,6 +11,7 @@ import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import PinValidationModal from '../../components/common/PinValidationModal';
 
 // ── Configuration des étapes du workflow ──
 const STEPS = [
@@ -42,6 +43,17 @@ export default function OperationDetailPage() {
   const [commentaire, setCommentaire] = useState('');
   const [motifRejet, setMotifRejet] = useState('');
   const [motifAnnulation, setMotifAnnulation] = useState('');
+
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pinCallback, setPinCallback] = useState(null);
+
+  const executeWithPin = (actionFn) => {
+    setPinCallback(() => async (pin) => {
+      setShowPinModal(false);
+      await actionFn(pin);
+    });
+    setShowPinModal(true);
+  };
 
   // ────────────────────────────────────────────────────────────────────────────
   // Chargement des données
@@ -119,69 +131,77 @@ export default function OperationDetailPage() {
   // ────────────────────────────────────────────────────────────────────────────
   // Actions du workflow
   // ────────────────────────────────────────────────────────────────────────────
-  const handleSoumettre = async () => {
-    setActionLoading(true);
-    try {
-      await operationApi.soumettre(op.id, commentaire);
-      toast.success("Opération soumise avec succès !");
-      setShowSoumettreModal(false);
-      setCommentaire('');
-      loadData();
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Échec de la soumission");
-    } finally {
-      setActionLoading(false);
-    }
+  const handleSoumettre = () => {
+    executeWithPin(async (pin) => {
+      setActionLoading(true);
+      try {
+        await operationApi.soumettre(op.id, commentaire, pin);
+        toast.success("Opération soumise avec succès !");
+        setShowSoumettreModal(false);
+        setCommentaire('');
+        loadData();
+      } catch (err) {
+        toast.error(err.response?.data?.message || "Échec de la soumission");
+      } finally {
+        setActionLoading(false);
+      }
+    });
   };
 
-  const handleValider = async () => {
+  const handleValider = () => {
     if (!nextStatus) return;
-    setActionLoading(true);
-    try {
-      await operationApi.valider(op.id, nextStatus, commentaire);
-      toast.success("Opération approuvée et transmise à l'étape suivante !");
-      setShowValiderModal(false);
-      setCommentaire('');
-      loadData();
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Échec de la validation");
-    } finally {
-      setActionLoading(false);
-    }
+    executeWithPin(async (pin) => {
+      setActionLoading(true);
+      try {
+        await operationApi.valider(op.id, nextStatus, commentaire, pin);
+        toast.success("Opération approuvée et transmise à l'étape suivante !");
+        setShowValiderModal(false);
+        setCommentaire('');
+        loadData();
+      } catch (err) {
+        toast.error(err.response?.data?.message || "Échec de la validation");
+      } finally {
+        setActionLoading(false);
+      }
+    });
   };
 
-  const handleRejeter = async () => {
+  const handleRejeter = () => {
     if (!motifRejet.trim()) {
       toast.error("Veuillez saisir un motif de rejet");
       return;
     }
-    setActionLoading(true);
-    try {
-      await operationApi.rejeter(op.id, motifRejet);
-      toast.success("Opération rejetée");
-      setShowRejeterModal(false);
-      setMotifRejet('');
-      loadData();
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Échec du rejet");
-    } finally {
-      setActionLoading(false);
-    }
+    executeWithPin(async (pin) => {
+      setActionLoading(true);
+      try {
+        await operationApi.rejeter(op.id, motifRejet, pin);
+        toast.success("Opération rejetée");
+        setShowRejeterModal(false);
+        setMotifRejet('');
+        loadData();
+      } catch (err) {
+        toast.error(err.response?.data?.message || "Échec du rejet");
+      } finally {
+        setActionLoading(false);
+      }
+    });
   };
 
-  const handleAnnuler = async () => {
-    setActionLoading(true);
-    try {
-      await operationApi.annuler(op.id, motifAnnulation);
-      toast.success("Opération annulée");
-      setShowAnnulerModal(false);
-      setMotifAnnulation('');
-      loadData();
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Échec de l'annulation");
-    } finally {
-      setActionLoading(false);
-    }
+  const handleAnnuler = () => {
+    executeWithPin(async (pin) => {
+      setActionLoading(true);
+      try {
+        await operationApi.annuler(op.id, motifAnnulation, pin);
+        toast.success("Opération annulée");
+        setShowAnnulerModal(false);
+        setMotifAnnulation('');
+        loadData();
+      } catch (err) {
+        toast.error(err.response?.data?.message || "Échec de l'annulation");
+      } finally {
+        setActionLoading(false);
+      }
+    });
   };
 
   // ────────────────────────────────────────────────────────────────────────────
@@ -771,6 +791,12 @@ export default function OperationDetailPage() {
           </div>
         </div>
       )}
+
+      <PinValidationModal
+        isOpen={showPinModal}
+        onClose={() => setShowPinModal(false)}
+        onConfirm={pinCallback}
+      />
     </div>
   );
 }

@@ -8,6 +8,7 @@ import Modal from './Modal';
 import { operationApi, institutionApi, compteReglementApi } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
+import PinValidationModal from './PinValidationModal';
 
 const DEVISES = ['XOF', 'XAF', 'EUR', 'USD', 'GBP', 'MAD', 'GNF'];
 
@@ -111,6 +112,17 @@ export default function NouvelleOperationModal({ isOpen, onClose, onSuccess }) {
   const [submitting, setSubmitting] = useState(false);
   const [submitAndSend, setSubmitAndSend] = useState(false);
 
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pinCallback, setPinCallback] = useState(null);
+
+  const executeWithPin = (actionFn) => {
+    setPinCallback(() => async (pin) => {
+      setShowPinModal(false);
+      await actionFn(pin);
+    });
+    setShowPinModal(true);
+  };
+
   // Data
   const [myInstitution, setMyInstitution] = useState(null);
   const [allInstitutions, setAllInstitutions] = useState([]);
@@ -172,10 +184,13 @@ export default function NouvelleOperationModal({ isOpen, onClose, onSuccess }) {
           targetId = mine?.id;
         } catch (_) {
           try {
-            const listRes = await institutionApi.findAll({ search: sigle, size: 5 });
-            const found = (listRes.data?.content || []).find(
-              i => i.sigle?.toUpperCase() === sigle || i.code?.toUpperCase() === sigle
-            );
+            const listRes = await institutionApi.findAll({ size: 100 });
+            const cleanSigle = sigle.toLowerCase().replace(/[^a-z0-9]/g, "");
+            const found = (listRes.data?.content || []).find(i => {
+              const normSigle = (i.sigle || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+              const normCode = (i.code || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+              return normSigle === cleanSigle || normCode === cleanSigle;
+            });
             if (found) {
               mine = found;
               targetId = found.id;
@@ -185,6 +200,7 @@ export default function NouvelleOperationModal({ isOpen, onClose, onSuccess }) {
           }
         }
       }
+
 
       if (!mine || !targetId) {
         setLoadingInst(false);
@@ -487,28 +503,30 @@ export default function NouvelleOperationModal({ isOpen, onClose, onSuccess }) {
     numeroCheque: form.typeOperation === 'CHEQUE' ? form.numeroCheque : undefined,
   });
 
-  const handleSubmit = async (andSubmit = false) => {
+  const handleSubmit = (andSubmit = false) => {
     if (!validate()) return;
-    setSubmitting(true);
-    setSubmitAndSend(andSubmit);
-    try {
-      const res = await operationApi.create(buildPayload());
-      const opId = res.data.id;
-      const ref = res.data.referenceUnique;
-      if (andSubmit) {
-        await operationApi.soumettre(opId, 'Soumission directe depuis la saisie');
-        toast.success(`Opération ${ref} créée et soumise !`, { duration: 5000 });
-      } else {
-        toast.success(`Opération ${ref} enregistrée en brouillon`, { duration: 4000 });
+    executeWithPin(async (pin) => {
+      setSubmitting(true);
+      setSubmitAndSend(andSubmit);
+      try {
+        const res = await operationApi.create(buildPayload(), pin);
+        const opId = res.data.id;
+        const ref = res.data.referenceUnique;
+        if (andSubmit) {
+          await operationApi.soumettre(opId, 'Soumission directe depuis la saisie', pin);
+          toast.success(`Opération ${ref} créée et soumise !`, { duration: 5000 });
+        } else {
+          toast.success(`Opération ${ref} enregistrée en brouillon`, { duration: 4000 });
+        }
+        onSuccess?.();
+        onClose();
+      } catch (err) {
+        const msg = err.response?.data?.message || err.message || 'Erreur lors de la création';
+        toast.error(msg);
+      } finally {
+        setSubmitting(false);
       }
-      onSuccess?.();
-      onClose();
-    } catch (err) {
-      const msg = err.response?.data?.message || err.message || 'Erreur lors de la création';
-      toast.error(msg);
-    } finally {
-      setSubmitting(false);
-    }
+    });
   };
 
   // ────────────────────────────────────────────────────────────────────────────
@@ -897,6 +915,11 @@ export default function NouvelleOperationModal({ isOpen, onClose, onSuccess }) {
           </div>
         </div>
       </div>
+      <PinValidationModal
+        isOpen={showPinModal}
+        onClose={() => setShowPinModal(false)}
+        onConfirm={pinCallback}
+      />
     </Modal>
   );
 }

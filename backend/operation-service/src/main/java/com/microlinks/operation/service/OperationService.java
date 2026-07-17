@@ -71,7 +71,22 @@ public class OperationService {
 
     @Transactional
     public OperationDto create(OperationCreateRequest req, String userId, String userName, UUID institutionId) {
+        UUID opId = UUID.randomUUID();
+        UUID activeTenantId = com.microlinks.operation.config.TenantContext.getCurrentTenant();
+        if (activeTenantId == null) {
+            activeTenantId = institutionId;
+        }
+
+        // Recherche du hash de la transaction précédente
+        String prevHash = operationRepository.findFirstByOrderByCreatedAtDesc()
+                .map(Operation::getHash)
+                .orElse("0000000000000000000000000000000000000000000000000000000000000000");
+
+        LocalDateTime now = LocalDateTime.now();
+
         Operation op = Operation.builder()
+                .id(opId)
+                .tenantId(activeTenantId)
                 .referenceUnique(generateReference(req.getTypeOperation()))
                 .typeOperation(req.getTypeOperation())
                 .statut(StatutOperation.BROUILLON)
@@ -101,12 +116,17 @@ public class OperationService {
                 // Tracabilite
                 .creePar(userId)
                 .institutionCreateurId(institutionId)
+                .createdAt(now)
+                .updatedAt(now)
                 .build();
+
+        op.setPreviousHash(prevHash);
+        op.setHash(op.calculateHash(prevHash));
 
         Operation saved = operationRepository.save(op);
         addHistorique(saved, null, StatutOperation.BROUILLON, "Opération créée", userId, userName, institutionId);
 
-        log.info("Opération créée : {} par {}", saved.getReferenceUnique(), userId);
+        log.info("Opération créée et chaînée : {} par {} (Tenant: {})", saved.getReferenceUnique(), userId, activeTenantId);
         return toDto(saved);
     }
 
@@ -345,6 +365,8 @@ public class OperationService {
                 .creePar(op.getCreePar())
                 .createdAt(op.getCreatedAt())
                 .updatedAt(op.getUpdatedAt())
+                .previousHash(op.getPreviousHash())
+                .hash(op.getHash())
                 .build();
     }
 
@@ -352,6 +374,7 @@ public class OperationService {
         List<Operation> operations = operationRepository.findAll();
         List<String> corruptedOps = new java.util.ArrayList<>();
         
+        // 1. Vérification des checksums internes
         for (Operation op : operations) {
             String calculated = op.calculateChecksum();
             if (op.getChecksum() == null || !op.getChecksum().equals(calculated)) {
@@ -359,30 +382,55 @@ public class OperationService {
             }
         }
 
+        // 2. Vérification du chaînage blockchain des Opérations
+        List<Operation> sortedOps = operationRepository.findAll(Sort.by(Sort.Direction.ASC, "createdAt"));
+        List<String> corruptedBlockchain = new java.util.ArrayList<>();
+        String expectedOpPrevHash = "0000000000000000000000000000000000000000000000000000000000000000";
+
+        for (Operation op : sortedOps) {
+            if (op.getPreviousHash() == null || !op.getPreviousHash().equals(expectedOpPrevHash)) {
+                corruptedBlockchain.add(op.getReferenceUnique() + " (Lien blockchain rompu - Attendu: " 
+                        + expectedOpPrevHash + ", Obtenu: " + op.getPreviousHash() + ")");
+            } else {
+                String calculatedHash = op.calculateHash(op.getPreviousHash());
+                if (op.getHash() == null || !op.getHash().equals(calculatedHash)) {
+                    corruptedBlockchain.add(op.getReferenceUnique() + " (Hash blockchain invalide - Attendu: " 
+                            + calculatedHash + ", Obtenu: " + op.getHash() + ")");
+                }
+            }
+            expectedOpPrevHash = op.getHash() != null ? op.getHash() : "";
+        }
+
+        // 3. Calcul de la racine de Merkle
+        List<String> opHashes = sortedOps.stream()
+                .map(Operation::getHash)
+                .filter(h -> h != null && !h.isBlank())
+                .toList();
+        MerkleTree merkleTree = new MerkleTree(opHashes);
+        String merkleRoot = merkleTree.getRootHash();
+
+        // 4. Vérification du chaînage blockchain des Historiques
         List<HistoriqueStatut> history = historiqueRepository.findAll(Sort.by(Sort.Direction.ASC, "dateAction"));
         List<String> corruptedHist = new java.util.ArrayList<>();
         
         String expectedPrevHash = "0000000000000000000000000000000000000000000000000000000000000000";
         for (HistoriqueStatut hist : history) {
-            // Verify previous hash link
             if (hist.getPreviousHash() == null || !hist.getPreviousHash().equals(expectedPrevHash)) {
-                corruptedHist.add("Lien corrompu pour l'historique " + hist.getId() + " de l'opération " + 
+                corruptedHist.add("Lien historique rompu pour l'ID " + hist.getId() + " de l'opération " + 
                     (hist.getOperation() != null ? hist.getOperation().getReferenceUnique() : "Inconnue"));
             } else {
-                // Verify hash itself
                 String calculatedHash = hist.calculateHash(hist.getPreviousHash());
                 if (hist.getHash() == null || !hist.getHash().equals(calculatedHash)) {
-                    corruptedHist.add("Empreinte invalide pour l'historique " + hist.getId() + " de l'opération " + 
+                    corruptedHist.add("Empreinte historique invalide pour l'ID " + hist.getId() + " de l'opération " + 
                         (hist.getOperation() != null ? hist.getOperation().getReferenceUnique() : "Inconnue"));
                 }
             }
-            // Move to next in chain
             expectedPrevHash = hist.getHash() != null ? hist.getHash() : "";
         }
 
-        int totalCorruptions = corruptedOps.size() + corruptedHist.size();
+        int totalCorruptions = corruptedOps.size() + corruptedHist.size() + corruptedBlockchain.size();
         String status = "SECURE";
-        if (totalCorruptions >= 10) {
+        if (corruptedBlockchain.size() > 0 || totalCorruptions >= 10) {
             status = "CRITICAL";
         } else if (totalCorruptions > 0) {
             status = "WARNING";
@@ -393,6 +441,8 @@ public class OperationService {
                 .totalHistoryLogsChecked(history.size())
                 .corruptedOperationIds(corruptedOps)
                 .corruptedHistoryLogIds(corruptedHist)
+                .corruptedBlockchainIds(corruptedBlockchain)
+                .merkleRoot(merkleRoot)
                 .totalCorruptions(totalCorruptions)
                 .status(status)
                 .scanTimestamp(LocalDateTime.now())

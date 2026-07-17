@@ -33,4 +33,7 @@ public class UserCreateRequest {
 
     @NotNull(message = "L'ID de l'institution est obligatoire")
     private UUID institutionId;
+
+    @Pattern(regexp = "^$|^[0-9]{4,6}$", message = "Le code PIN doit être composé de 4 à 6 chiffres")
+    private String pin;
 }
