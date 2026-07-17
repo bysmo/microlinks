@@ -1,0 +1,20 @@
+# Ignore macOS metadata files
+._*
+.DS_Store
+**/._*
+**/.DS_Store
+
+# Ignore IDE settings
+.vscode/
+.idea/
+
+# Ignore build artifacts and package manager caches
+target/
+.mvn/
+node_modules/
+.vite/
+dist/
+build/
+.next/
+.git/
+.dockerignore

@@ -31,6 +31,7 @@ spring:
         - id: institution-service
           uri: lb://institution-service
           predicates:
+            # NOTE : /api/v1/institutions/internal/** est bloqué par une route dédiée ci-dessous
             - Path=/api/v1/institutions/**, /api/v1/agences/**, /api/v1/comptes/**, /api/v1/zones-monetaires/**
           filters:
             - name: CircuitBreaker
@@ -77,6 +78,28 @@ spring:
           uri: lb://notification-service
           predicates:
             - Path=/api/v1/notifications/**
+
+        # Route sftp-service (endpoints admin uniquement)
+        - id: sftp-service
+          uri: lb://sftp-service
+          predicates:
+            - Path=/api/v1/sftp/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: sftpCB
+                fallbackUri: forward:/fallback
+
+        # Bloquer explicitement les endpoints internes de l'institution-service
+        # (ne doivent jamais être accessibles depuis l'extérieur)
+        - id: institution-internal-block
+          uri: lb://institution-service
+          predicates:
+            - Path=/api/v1/institutions/internal/**
+          filters:
+            - name: SetStatus
+              args:
+                status: "403"
 
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
@@ -132,6 +155,12 @@ resilience4j:
         waitDurationInOpenState: 10s
         failureRateThreshold: 50
       billingCB:
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        waitDurationInOpenState: 10s
+        failureRateThreshold: 50
+      sftpCB:
         slidingWindowSize: 10
         minimumNumberOfCalls: 5
         permittedNumberOfCallsInHalfOpenState: 3

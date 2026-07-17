@@ -12,5 +12,6 @@
     <include file="db/changelog/v1/005-insert-initial-data.xml"/>
     <include file="db/changelog/v1/006-add-banking-info.xml"/>
     <include file="db/changelog/v1/007-add-compte-reglement.xml"/>
+    <include file="db/changelog/v1/008-add-sftp-config.xml"/>
 
 </databaseChangeLog>

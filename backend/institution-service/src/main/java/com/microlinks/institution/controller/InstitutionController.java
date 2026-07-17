@@ -112,4 +112,23 @@ public class InstitutionController {
     public ResponseEntity<InstitutionService.DashboardStats> getStats() {
         return ResponseEntity.ok(institutionService.getStats());
     }
+
+    // ===================== Configuration SFTP (Admin uniquement) =====================
+
+    @GetMapping("/{id}/sftp")
+    @Operation(summary = "Récupérer la configuration SFTP d'une institution (admin uniquement)")
+    @PreAuthorize("hasRole('ADMIN_PLATEFORME')")
+    public ResponseEntity<InstitutionSftpDto> getSftpConfig(@PathVariable UUID id) {
+        return ResponseEntity.ok(institutionService.getSftpConfig(id));
+    }
+
+    @PutMapping("/{id}/sftp")
+    @Operation(summary = "Mettre à jour la configuration SFTP d'une institution (admin uniquement)")
+    @PreAuthorize("hasRole('ADMIN_PLATEFORME')")
+    public ResponseEntity<InstitutionSftpDto> updateSftpConfig(
+            @PathVariable UUID id,
+            @Valid @RequestBody InstitutionSftpConfigRequest request,
+            @AuthenticationPrincipal Jwt jwt) {
+        return ResponseEntity.ok(institutionService.updateSftpConfig(id, request, jwt.getSubject()));
+    }
 }

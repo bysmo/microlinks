@@ -29,6 +29,9 @@ public class SecurityConfig {
                 .requestMatchers("/actuator/health", "/api-docs/**", "/swagger-ui/**").permitAll()
                 // Données de référence : zones monétaires accessibles sans token
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/zones-monetaires", "/api/v1/zones-monetaires/**").permitAll()
+                // Endpoints internes service-à-service (sftp-service → institution-service)
+                // JAMAIS exposés via l'API Gateway — accès réseau Docker interne uniquement
+                .requestMatchers("/api/v1/institutions/internal/**").permitAll()
                 .anyRequest().authenticated()
             )
             .oauth2ResourceServer(oauth2 -> oauth2

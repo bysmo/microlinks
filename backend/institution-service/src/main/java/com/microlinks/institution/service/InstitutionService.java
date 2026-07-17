@@ -16,6 +16,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.ArrayList;
 import java.util.UUID;
 
 @Service
@@ -215,6 +216,68 @@ public class InstitutionService {
         return new DashboardStats(totalInstitutions, banques, microFinances, mesoFinances, actives);
     }
 
+    // ===================== Configuration SFTP =====================
+
+    /**
+     * Récupère la configuration SFTP d'une institution.
+     * Les données sensibles (mot de passe, clé privée) ne sont jamais retournées.
+     * Réservé à l'ADMIN_PLATEFORME.
+     */
+    public InstitutionSftpDto getSftpConfig(UUID id) {
+        Institution institution = findInstitutionById(id);
+        return toSftpDto(institution);
+    }
+
+    /**
+     * Met à jour la configuration SFTP d'une institution.
+     * Réservé à l'ADMIN_PLATEFORME.
+     * Le mot de passe et la clé privée ne sont mis à jour que si explicitement fournis.
+     */
+    @Transactional
+    @CacheEvict(value = "institutions", key = "#id")
+    public InstitutionSftpDto updateSftpConfig(UUID id, InstitutionSftpConfigRequest request, String currentUser) {
+        Institution institution = findInstitutionById(id);
+
+        // Connexion SFTP
+        if (request.getSftpHost() != null) institution.setSftpHost(request.getSftpHost());
+        if (request.getSftpPort() != null) institution.setSftpPort(request.getSftpPort());
+        if (request.getSftpUser() != null) institution.setSftpUser(request.getSftpUser());
+
+        // Mise à jour des secrets uniquement si fournis (non null et non vides)
+        if (request.getSftpPassword() != null && !request.getSftpPassword().isBlank()) {
+            institution.setSftpPassword(request.getSftpPassword());
+        }
+        if (request.getSftpPrivateKey() != null && !request.getSftpPrivateKey().isBlank()) {
+            institution.setSftpPrivateKey(request.getSftpPrivateKey());
+        }
+
+        // Répertoires
+        if (request.getSftpRepertoireEnvoi() != null) institution.setSftpRepertoireEnvoi(request.getSftpRepertoireEnvoi());
+        if (request.getSftpRepertoireReception() != null) institution.setSftpRepertoireReception(request.getSftpRepertoireReception());
+        if (request.getSftpRepertoireArchivage() != null) institution.setSftpRepertoireArchivage(request.getSftpRepertoireArchivage());
+
+        // Types de fichiers
+        if (request.getTypesFichiersEnvoi() != null) {
+            institution.setTypesFichiersEnvoi(new ArrayList<>(request.getTypesFichiersEnvoi()));
+        }
+        if (request.getTypesFichiersReception() != null) {
+            institution.setTypesFichiersReception(new ArrayList<>(request.getTypesFichiersReception()));
+        }
+
+        // Notifications
+        if (request.getSftpNotificationActive() != null) {
+            institution.setSftpNotificationActive(request.getSftpNotificationActive());
+        }
+        if (request.getSftpEmailsNotification() != null) {
+            institution.setSftpEmailsNotification(request.getSftpEmailsNotification());
+        }
+
+        institution.setUpdatedBy(currentUser);
+        Institution saved = institutionRepository.save(institution);
+        log.info("Configuration SFTP mise à jour pour l'institution {} par {}", institution.getCode(), currentUser);
+        return toSftpDto(saved);
+    }
+
     // ===================== Mappers =====================
 
     private InstitutionDto toDto(Institution i) {
@@ -248,6 +311,28 @@ public class InstitutionService {
         if (i.getAgences() != null) {
             dto.setNombreAgences(i.getAgences().size());
         }
+        // Types de fichiers (visibles par tous les utilisateurs authentifiés)
+        dto.setTypesFichiersEnvoi(i.getTypesFichiersEnvoi());
+        dto.setTypesFichiersReception(i.getTypesFichiersReception());
+        // La config SFTP complète n'est pas incluse ici — utiliser getSftpConfig() pour les admins
+        return dto;
+    }
+
+    private InstitutionSftpDto toSftpDto(Institution i) {
+        InstitutionSftpDto dto = new InstitutionSftpDto();
+        dto.setSftpHost(i.getSftpHost());
+        dto.setSftpPort(i.getSftpPort());
+        dto.setSftpUser(i.getSftpUser());
+        // Indique seulement si les secrets sont configurés — ne les expose jamais
+        dto.setSftpPasswordConfigured(i.getSftpPassword() != null && !i.getSftpPassword().isBlank());
+        dto.setSftpPrivateKeyConfigured(i.getSftpPrivateKey() != null && !i.getSftpPrivateKey().isBlank());
+        dto.setSftpRepertoireEnvoi(i.getSftpRepertoireEnvoi());
+        dto.setSftpRepertoireReception(i.getSftpRepertoireReception());
+        dto.setSftpRepertoireArchivage(i.getSftpRepertoireArchivage());
+        dto.setTypesFichiersEnvoi(i.getTypesFichiersEnvoi());
+        dto.setTypesFichiersReception(i.getTypesFichiersReception());
+        dto.setSftpNotificationActive(i.getSftpNotificationActive());
+        dto.setSftpEmailsNotification(i.getSftpEmailsNotification());
         return dto;
     }
 

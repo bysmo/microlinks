@@ -1,0 +1,62 @@
+spring:
+  application:
+    name: sftp-service
+
+server:
+  port: 8087
+
+# Keycloak JWT
+spring.security:
+  oauth2:
+    resourceserver:
+      jwt:
+        jwk-set-uri: ${KEYCLOAK_URL:http://keycloak:8080}/realms/${KEYCLOAK_REALM:microlinks}/protocol/openid-connect/certs
+
+# RabbitMQ
+spring.rabbitmq:
+  host: ${SPRING_RABBITMQ_HOST:rabbitmq}
+  port: 5672
+  username: ${SPRING_RABBITMQ_USERNAME:microlinks}
+  password: ${SPRING_RABBITMQ_PASSWORD:RabbitMQ@2024}
+
+# SFTP Polling
+sftp:
+  polling:
+    cron: ${SFTP_POLLING_CRON:0 */5 * * * *}
+  encryption:
+    key: ${SFTP_ENCRYPTION_KEY:MicroLinksSftp#Key256bits!Secure}
+
+# institution-service URL (réseau interne Docker)
+institution:
+  service:
+    url: ${INSTITUTION_SERVICE_URL:http://institution-service:8082}
+
+# Eureka
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_SERVER_URL:http://discovery-service:8761/eureka/}
+  instance:
+    prefer-ip-address: true
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+# Swagger
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  level:
+    com.microlinks.sftp: INFO
+    com.jcraft.jsch: WARN

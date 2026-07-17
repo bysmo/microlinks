@@ -1,5 +1,6 @@
 package com.microlinks.institution.entity;
 
+import com.microlinks.institution.config.SensitiveStringConverter;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -90,6 +91,82 @@ public class Institution {
 
     @OneToMany(mappedBy = "institutionProprietaire", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<CompteCorrespondance> comptesCorrespondance;
+
+    // ===================== Configuration SFTP (admin uniquement) =====================
+
+    /** Hôte SFTP de l'institution (adresse IP ou nom de domaine) */
+    @Column(name = "sftp_host", length = 200)
+    private String sftpHost;
+
+    /** Port SFTP (défaut : 22) */
+    @Column(name = "sftp_port")
+    private Integer sftpPort;
+
+    /** Nom d'utilisateur SFTP */
+    @Column(name = "sftp_user", length = 100)
+    private String sftpUser;
+
+    /** Mot de passe SFTP chiffré en AES-256/GCM */
+    @Convert(converter = SensitiveStringConverter.class)
+    @Column(name = "sftp_password", columnDefinition = "TEXT")
+    private String sftpPassword;
+
+    /** Clé privée SSH chiffrée en AES-256/GCM (alternative au mot de passe) */
+    @Convert(converter = SensitiveStringConverter.class)
+    @Column(name = "sftp_private_key", columnDefinition = "TEXT")
+    private String sftpPrivateKey;
+
+    /** Répertoire SFTP où l'institution dépose ses fichiers à envoyer vers la plateforme */
+    @Column(name = "sftp_repertoire_envoi", length = 500)
+    private String sftpRepertoireEnvoi;
+
+    /** Répertoire SFTP où la plateforme dépose les fichiers destinés à cette institution */
+    @Column(name = "sftp_repertoire_reception", length = 500)
+    private String sftpRepertoireReception;
+
+    /** Répertoire SFTP où les fichiers traités sont archivés */
+    @Column(name = "sftp_repertoire_archivage", length = 500)
+    private String sftpRepertoireArchivage;
+
+    // ===================== Types de fichiers échangeables =====================
+
+    /** Types de fichiers que cette institution peut envoyer vers la plateforme */
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(
+        name = "institution_types_fichiers_envoi",
+        joinColumns = @JoinColumn(name = "institution_id")
+    )
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type_fichier", length = 20)
+    @Builder.Default
+    private List<TypeFichierEchange> typesFichiersEnvoi = new java.util.ArrayList<>();
+
+    /** Types de fichiers que cette institution peut recevoir de la plateforme */
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(
+        name = "institution_types_fichiers_reception",
+        joinColumns = @JoinColumn(name = "institution_id")
+    )
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type_fichier", length = 20)
+    @Builder.Default
+    private List<TypeFichierEchange> typesFichiersReception = new java.util.ArrayList<>();
+
+    // ===================== Notifications SFTP =====================
+
+    /** Si true, l'administrateur de l'établissement est notifié par email à chaque fichier reçu */
+    @Column(name = "sftp_notification_active")
+    @Builder.Default
+    private Boolean sftpNotificationActive = false;
+
+    /**
+     * Adresses email des destinataires des notifications SFTP.
+     * Plusieurs adresses séparées par des point-virgules (;).
+     */
+    @Column(name = "sftp_emails_notification", columnDefinition = "TEXT")
+    private String sftpEmailsNotification;
+
+    // ===================== Audit =====================
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

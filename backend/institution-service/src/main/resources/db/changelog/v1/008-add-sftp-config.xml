@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!-- =====================================================================
+         008 : Ajout de la configuration SFTP aux institutions financières
+         - Colonnes SFTP sur la table institutions
+         - Tables de jointure pour les types de fichiers échangeables
+         - Colonnes pour les notifications email
+         ===================================================================== -->
+
+    <changeSet id="008-add-sftp-config" author="antigravity">
+
+        <!-- Connexion SFTP -->
+        <addColumn tableName="institutions">
+            <column name="sftp_host" type="varchar(200)"
+                    remarks="Hôte SFTP de l'institution (IP ou nom de domaine)"/>
+            <column name="sftp_port" type="integer" defaultValueNumeric="22"
+                    remarks="Port SFTP (défaut : 22)"/>
+            <column name="sftp_user" type="varchar(100)"
+                    remarks="Nom d'utilisateur SFTP"/>
+            <column name="sftp_password" type="text"
+                    remarks="Mot de passe SFTP chiffré AES-256/GCM"/>
+            <column name="sftp_private_key" type="text"
+                    remarks="Clé privée SSH chiffrée AES-256/GCM (alternative au mot de passe)"/>
+        </addColumn>
+
+        <!-- Répertoires SFTP -->
+        <addColumn tableName="institutions">
+            <column name="sftp_repertoire_envoi" type="varchar(500)"
+                    remarks="Répertoire SFTP où l'institution dépose ses fichiers à envoyer"/>
+            <column name="sftp_repertoire_reception" type="varchar(500)"
+                    remarks="Répertoire SFTP où la plateforme dépose les fichiers reçus"/>
+            <column name="sftp_repertoire_archivage" type="varchar(500)"
+                    remarks="Répertoire SFTP d'archivage des fichiers traités"/>
+        </addColumn>
+
+        <!-- Notifications email -->
+        <addColumn tableName="institutions">
+            <column name="sftp_notification_active" type="boolean" defaultValueBoolean="false"
+                    remarks="Activer les notifications email lors de la réception d'un fichier"/>
+            <column name="sftp_emails_notification" type="text"
+                    remarks="Adresses email de notification séparées par des point-virgules"/>
+        </addColumn>
+
+    </changeSet>
+
+    <!-- Table des types de fichiers pouvant être envoyés par une institution -->
+    <changeSet id="008-create-institution-types-fichiers-envoi" author="antigravity">
+        <createTable tableName="institution_types_fichiers_envoi"
+                     remarks="Types de fichiers qu'une institution peut envoyer vers la plateforme">
+            <column name="institution_id" type="uuid">
+                <constraints nullable="false"
+                             foreignKeyName="fk_types_envoi_institution"
+                             references="institutions(id)"
+                             deleteCascade="true"/>
+            </column>
+            <column name="type_fichier" type="varchar(20)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addPrimaryKey tableName="institution_types_fichiers_envoi"
+                       columnNames="institution_id, type_fichier"
+                       constraintName="pk_institution_types_envoi"/>
+    </changeSet>
+
+    <!-- Table des types de fichiers pouvant être reçus par une institution -->
+    <changeSet id="008-create-institution-types-fichiers-reception" author="antigravity">
+        <createTable tableName="institution_types_fichiers_reception"
+                     remarks="Types de fichiers qu'une institution peut recevoir de la plateforme">
+            <column name="institution_id" type="uuid">
+                <constraints nullable="false"
+                             foreignKeyName="fk_types_reception_institution"
+                             references="institutions(id)"
+                             deleteCascade="true"/>
+            </column>
+            <column name="type_fichier" type="varchar(20)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addPrimaryKey tableName="institution_types_fichiers_reception"
+                       columnNames="institution_id, type_fichier"
+                       constraintName="pk_institution_types_reception"/>
+    </changeSet>
+
+</databaseChangeLog>
