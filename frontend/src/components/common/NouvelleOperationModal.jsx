@@ -168,16 +168,29 @@ export default function NouvelleOperationModal({ isOpen, onClose, onSuccess }) {
       let targetId = user?.institutionId;
 
       if (targetId) {
-        try {
-          const instRes = await institutionApi.findById(targetId);
-          mine = instRes?.data;
-        } catch (e) {
-          console.warn('findById émetteur échoué, fallback...', e.message);
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetId);
+        if (isUuid) {
+          try {
+            const instRes = await institutionApi.findById(targetId);
+            mine = instRes?.data;
+          } catch (e) {
+            console.warn('findById émetteur échoué, fallback...', e.message);
+          }
+        } else {
+          try {
+            const instRes = await institutionApi.findByCode(targetId.toUpperCase());
+            mine = instRes?.data;
+            targetId = mine?.id;
+          } catch (e) {
+            console.warn('findByCode émetteur échoué pour institutionId non-UUID...', e.message);
+          }
         }
       }
 
       if (!mine && user?.username) {
-        const sigle = user.username.split('.')[0].toUpperCase();
+        const sigle = user.username.includes('@')
+          ? user.username.split('@')[1].split('.')[0].toUpperCase()
+          : user.username.split('.')[0].toUpperCase();
         try {
           const res = await institutionApi.findByCode(sigle);
           mine = res.data;

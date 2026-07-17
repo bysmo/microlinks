@@ -74,6 +74,13 @@ export const userApi = {
   updateMyPin: (institutionId, pin) => api.put(`/api/v1/institutions/${institutionId}/users/me/pin`, null, { params: { pin } }),
 };
 
+// ======================== PROTOCOLES D'ÉCHANGE (SFTP/FTP/FTPS) ========================
+
+export const protocolApi = {
+  get: (institutionId) => api.get(`/api/v1/institutions/${institutionId}/protocole-echange`),
+  upsert: (institutionId, data) => api.put(`/api/v1/institutions/${institutionId}/protocole-echange`, data),
+};
+
 // ======================== ZONES MONETAIRES ========================
 
 export const zoneMonetaireApi = {

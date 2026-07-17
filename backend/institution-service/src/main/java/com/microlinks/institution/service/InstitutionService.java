@@ -278,6 +278,55 @@ public class InstitutionService {
         return toSftpDto(saved);
     }
 
+    // ===================== Configuration Protocole d'échange (Admin Institution) =====================
+
+    /**
+     * Récupère la configuration du protocole d'échange d'une institution.
+     * Accessible par ADMIN_INSTITUTION (propre institution) et ADMIN_PLATEFORME.
+     * Les données sensibles (mot de passe) ne sont jamais retournées.
+     */
+    public ProtocoleEchangeDto getProtocoleEchange(UUID id) {
+        Institution institution = findInstitutionById(id);
+        return toProtocoleDto(institution);
+    }
+
+    /**
+     * Met à jour la configuration du protocole d'échange d'une institution.
+     * Accessible par ADMIN_INSTITUTION (propre institution) et ADMIN_PLATEFORME.
+     * Le mot de passe n'est mis à jour que si explicitement fourni.
+     */
+    @Transactional
+    @CacheEvict(value = "institutions", key = "#id")
+    public ProtocoleEchangeDto updateProtocoleEchange(UUID id, ProtocoleEchangeRequest request, String currentUser) {
+        Institution institution = findInstitutionById(id);
+
+        if (request.getProtocole() != null) institution.setProtocoleEchange(request.getProtocole());
+        if (request.getNomHote() != null) institution.setSftpHost(request.getNomHote());
+        if (request.getAdresseIp() != null) institution.setSftpAdresseIp(request.getAdresseIp());
+        if (request.getPort() != null) {
+            try { institution.setSftpPort(Integer.parseInt(request.getPort())); } catch (NumberFormatException ignored) {}
+        }
+        if (request.getUtilisateur() != null) institution.setSftpUser(request.getUtilisateur());
+        if (request.getMotDePasse() != null && !request.getMotDePasse().isBlank()) {
+            institution.setSftpPassword(request.getMotDePasse());
+        }
+        if (request.getRepertoireEntree() != null) institution.setSftpRepertoireReception(request.getRepertoireEntree());
+        if (request.getRepertoireSortie() != null) institution.setSftpRepertoireEnvoi(request.getRepertoireSortie());
+        if (request.getRepertoireArchivage() != null) institution.setSftpRepertoireArchivage(request.getRepertoireArchivage());
+        if (request.getTypesFichiersEnvoi() != null) {
+            institution.setTypesFichiersEnvoi(new ArrayList<>(request.getTypesFichiersEnvoi()));
+        }
+        if (request.getTypesFichiersReception() != null) {
+            institution.setTypesFichiersReception(new ArrayList<>(request.getTypesFichiersReception()));
+        }
+        if (request.getActif() != null) institution.setProtocoleActif(request.getActif());
+
+        institution.setUpdatedBy(currentUser);
+        Institution saved = institutionRepository.save(institution);
+        log.info("Configuration protocole d'échange mise à jour pour l'institution {} par {}", institution.getCode(), currentUser);
+        return toProtocoleDto(saved);
+    }
+
     // ===================== Mappers =====================
 
     private InstitutionDto toDto(Institution i) {
@@ -335,6 +384,26 @@ public class InstitutionService {
         dto.setSftpEmailsNotification(i.getSftpEmailsNotification());
         return dto;
     }
+
+    private ProtocoleEchangeDto toProtocoleDto(Institution i) {
+        ProtocoleEchangeDto dto = new ProtocoleEchangeDto();
+        dto.setProtocole(i.getProtocoleEchange() != null ? i.getProtocoleEchange() : "SFTP");
+        dto.setNomHote(i.getSftpHost());
+        dto.setAdresseIp(i.getSftpAdresseIp());
+        dto.setPort(i.getSftpPort() != null ? String.valueOf(i.getSftpPort()) : "22");
+        dto.setUtilisateur(i.getSftpUser());
+        dto.setMotDePasseConfigured(i.getSftpPassword() != null && !i.getSftpPassword().isBlank());
+        // Entrée = réception (la plateforme dépose pour l'institution)
+        dto.setRepertoireEntree(i.getSftpRepertoireReception());
+        // Sortie = envoi (l'institution dépose vers la plateforme)
+        dto.setRepertoireSortie(i.getSftpRepertoireEnvoi());
+        dto.setRepertoireArchivage(i.getSftpRepertoireArchivage());
+        dto.setTypesFichiersEnvoi(i.getTypesFichiersEnvoi());
+        dto.setTypesFichiersReception(i.getTypesFichiersReception());
+        dto.setActif(i.getProtocoleActif() != null ? i.getProtocoleActif() : false);
+        return dto;
+    }
+
 
     private ZoneMonetaireDto toZoneDto(ZoneMonetaire z) {
         if (z == null) return null;

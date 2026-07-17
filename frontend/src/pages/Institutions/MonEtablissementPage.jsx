@@ -3,9 +3,10 @@ import {
   Building2, CreditCard, Globe, Phone, Mail, MapPin,
   Save, AlertCircle, Calendar, ShieldCheck, Loader2,
   Plus, Trash2, Pencil, X, Check, ChevronsUpDown, Landmark,
-  Users, UserPlus
+  Users, UserPlus, Lock, RefreshCw, Server, FolderInput,
+  FolderOutput, Archive, Network, Wifi
 } from 'lucide-react';
-import { institutionApi, compteReglementApi, userApi } from '../../services/api';
+import { institutionApi, compteReglementApi, userApi, protocolApi } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -290,13 +291,31 @@ export default function MonEtablissementPage() {
   const [compteModal, setCompteModal] = useState({ open: false, compte: null });
 
   // Gestion des utilisateurs / collaborateurs
-  const [activeTab, setActiveTab] = useState('settings'); // 'settings', 'users' ou 'security'
+  const [activeTab, setActiveTab] = useState('settings'); // 'settings', 'users', 'security', 'protocol'
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [userModalOpen, setUserModalOpen] = useState(false);
 
   const [newPin, setNewPin] = useState('');
   const [savingPin, setSavingPin] = useState(false);
+
+  // ─── Protocole d'échange ────────────────────────────────────────────────────
+  const [protocolForm, setProtocolForm] = useState({
+    protocole: 'SFTP',
+    nomHote: '',
+    adresseIp: '',
+    port: '22',
+    utilisateur: '',
+    motDePasse: '',
+    repertoireEntree: '',
+    repertoireSortie: '',
+    repertoireArchivage: '',
+    typesFichiersEnvoi: [],
+    typesFichiersReception: [],
+    actif: true,
+  });
+  const [loadingProtocol, setLoadingProtocol] = useState(false);
+  const [savingProtocol, setSavingProtocol] = useState(false);
 
   const handleUpdatePin = async (e) => {
     e.preventDefault();
@@ -335,7 +354,52 @@ export default function MonEtablissementPage() {
     if (activeTab === 'users' && instId) {
       loadUsers(instId);
     }
+    if (activeTab === 'protocol' && instId) {
+      loadProtocol(instId);
+    }
   }, [activeTab, instId, loadUsers]);
+
+  const loadProtocol = useCallback(async (id) => {
+    if (!id) return;
+    setLoadingProtocol(true);
+    try {
+      const res = await protocolApi.get(id);
+      if (res.data) {
+        setProtocolForm(prev => ({
+          ...prev,
+          ...res.data,
+          motDePasse: '',
+          typesFichiersEnvoi: res.data.typesFichiersEnvoi || [],
+          typesFichiersReception: res.data.typesFichiersReception || [],
+        }));
+      }
+    } catch (e) {
+      if (e.response?.status !== 404) {
+        console.warn('Erreur chargement protocole:', e.message);
+      }
+    } finally {
+      setLoadingProtocol(false);
+    }
+  }, []);
+
+  const handleSaveProtocol = async (e) => {
+    e.preventDefault();
+    if (!protocolForm.nomHote.trim()) return toast.error('Le nom d\'hôte est obligatoire');
+    if (!protocolForm.adresseIp.trim()) return toast.error('L\'adresse IP est obligatoire');
+    if (!protocolForm.repertoireEntree.trim()) return toast.error('Le répertoire d\'entrée est obligatoire');
+    if (!protocolForm.repertoireSortie.trim()) return toast.error('Le répertoire de sortie est obligatoire');
+    setSavingProtocol(true);
+    try {
+      await protocolApi.upsert(instId, protocolForm);
+      toast.success('Configuration du protocole enregistrée avec succès !');
+      setProtocolForm(prev => ({ ...prev, motDePasse: '' }));
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message;
+      toast.error(`Erreur : ${msg}`);
+    } finally {
+      setSavingProtocol(false);
+    }
+  };
 
   const handleCreateUser = async (userData) => {
     try {
@@ -384,17 +448,30 @@ export default function MonEtablissementPage() {
       let resolvedId = null;
 
       if (user?.institutionId) {
-        try {
-          const res = await institutionApi.findById(user.institutionId);
-          data = res.data;
-          resolvedId = user.institutionId;
-        } catch (e) {
-          console.warn('findById échoué, fallback...', e.message);
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.institutionId);
+        if (isUuid) {
+          try {
+            const res = await institutionApi.findById(user.institutionId);
+            data = res.data;
+            resolvedId = user.institutionId;
+          } catch (e) {
+            console.warn('findById échoué, fallback...', e.message);
+          }
+        } else {
+          try {
+            const res = await institutionApi.findByCode(user.institutionId.toUpperCase());
+            data = res.data;
+            resolvedId = data?.id;
+          } catch (e) {
+            console.warn('findByCode échoué pour institutionId non-UUID...', e.message);
+          }
         }
       }
 
       if (!data && user?.username) {
-        const sigle = user.username.split('.')[0].toUpperCase();
+        const sigle = user.username.includes('@')
+          ? user.username.split('@')[1].split('.')[0].toUpperCase()
+          : user.username.split('.')[0].toUpperCase();
         try {
           const res = await institutionApi.findByCode(sigle);
           data = res.data; resolvedId = data?.id;
@@ -586,10 +663,10 @@ export default function MonEtablissementPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-6 border-b border-white/5 pb-px mb-6">
+      <div className="flex gap-6 border-b border-white/5 pb-px mb-6 overflow-x-auto">
         <button
           onClick={() => setActiveTab('settings')}
-          className={`pb-3 text-sm font-semibold border-b-2 transition-all ${
+          className={`pb-3 text-sm font-semibold border-b-2 transition-all whitespace-nowrap ${
             activeTab === 'settings'
               ? 'text-primary-400 border-primary-400'
               : 'text-dark-400 border-transparent hover:text-white'
@@ -599,7 +676,7 @@ export default function MonEtablissementPage() {
         </button>
         <button
           onClick={() => setActiveTab('users')}
-          className={`pb-3 text-sm font-semibold border-b-2 transition-all ${
+          className={`pb-3 text-sm font-semibold border-b-2 transition-all whitespace-nowrap ${
             activeTab === 'users'
               ? 'text-primary-400 border-primary-400'
               : 'text-dark-400 border-transparent hover:text-white'
@@ -609,13 +686,24 @@ export default function MonEtablissementPage() {
         </button>
         <button
           onClick={() => setActiveTab('security')}
-          className={`pb-3 text-sm font-semibold border-b-2 transition-all ${
+          className={`pb-3 text-sm font-semibold border-b-2 transition-all whitespace-nowrap ${
             activeTab === 'security'
               ? 'text-primary-400 border-primary-400'
               : 'text-dark-400 border-transparent hover:text-white'
           }`}
         >
           Sécurité & Code PIN
+        </button>
+        <button
+          onClick={() => setActiveTab('protocol')}
+          className={`pb-3 text-sm font-semibold border-b-2 transition-all whitespace-nowrap flex items-center gap-1.5 ${
+            activeTab === 'protocol'
+              ? 'text-primary-400 border-primary-400'
+              : 'text-dark-400 border-transparent hover:text-white'
+          }`}
+        >
+          <Network className="w-3.5 h-3.5" />
+          Protocoles d'échange
         </button>
       </div>
 
@@ -1002,6 +1090,312 @@ export default function MonEtablissementPage() {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* ─── Onglet Protocoles d'échange ──────────────────────────────────────── */}
+      {activeTab === 'protocol' && (
+        <div className="max-w-2xl mx-auto space-y-6">
+          <div className="glass-card p-6 space-y-6">
+            <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+              <div className="w-10 h-10 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center">
+                <Server className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-white font-semibold text-base">Protocole d'échange de fichiers</h2>
+                <p className="text-dark-400 text-xs mt-0.5">
+                  Configurez le serveur SFTP/FTP/FTPS utilisé pour l'échange automatique de données avec la plateforme MicroLinks.
+                </p>
+              </div>
+            </div>
+
+            {loadingProtocol ? (
+              <div className="flex h-40 items-center justify-center">
+                <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
+              </div>
+            ) : (
+              <form onSubmit={handleSaveProtocol} className="space-y-5">
+
+                {/* Protocole & Statut */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-dark-300 text-xs font-semibold" htmlFor="proto-protocole">
+                      Protocole *
+                    </label>
+                    <select
+                      id="proto-protocole"
+                      value={protocolForm.protocole}
+                      onChange={e => {
+                        const p = e.target.value;
+                        setProtocolForm(prev => ({
+                          ...prev,
+                          protocole: p,
+                          port: p === 'SFTP' ? '22' : p === 'FTPS' ? '990' : '21',
+                        }));
+                      }}
+                      className="select"
+                    >
+                      <option value="SFTP">SFTP (SSH File Transfer)</option>
+                      <option value="FTP">FTP (File Transfer Protocol)</option>
+                      <option value="FTPS">FTPS (FTP over TLS/SSL)</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-dark-300 text-xs font-semibold">Statut</label>
+                    <div className="flex items-center gap-3 h-10 px-3 bg-dark-800/60 border border-dark-600 rounded-lg">
+                      <button
+                        type="button"
+                        onClick={() => setProtocolForm(prev => ({ ...prev, actif: !prev.actif }))}
+                        className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full transition-colors duration-200 focus:outline-none ${
+                          protocolForm.actif ? 'bg-cyan-500' : 'bg-dark-600'
+                        }`}
+                      >
+                        <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform duration-200 mt-0.5 ${
+                          protocolForm.actif ? 'translate-x-4' : 'translate-x-0.5'
+                        }`} />
+                      </button>
+                      <span className={`text-sm font-medium ${
+                        protocolForm.actif ? 'text-cyan-400' : 'text-dark-400'
+                      }`}>
+                        {protocolForm.actif ? 'Actif' : 'Inactif'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Hôte & IP */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-dark-300 text-xs font-semibold" htmlFor="proto-host">Nom d'hôte *</label>
+                    <div className="relative">
+                      <Wifi className="absolute left-3 top-2.5 w-4 h-4 text-dark-400" />
+                      <input
+                        id="proto-host"
+                        type="text"
+                        placeholder="Ex: sftp.microlinks.bf"
+                        value={protocolForm.nomHote}
+                        onChange={e => setProtocolForm(prev => ({ ...prev, nomHote: e.target.value }))}
+                        className="input pl-9"
+                        autoComplete="off"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-dark-300 text-xs font-semibold" htmlFor="proto-ip">Adresse IP du serveur *</label>
+                    <div className="relative">
+                      <Server className="absolute left-3 top-2.5 w-4 h-4 text-dark-400" />
+                      <input
+                        id="proto-ip"
+                        type="text"
+                        placeholder="Ex: 192.168.1.100"
+                        value={protocolForm.adresseIp}
+                        onChange={e => setProtocolForm(prev => ({ ...prev, adresseIp: e.target.value }))}
+                        className="input pl-9 font-mono"
+                        autoComplete="off"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Port & Utilisateur */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-dark-300 text-xs font-semibold" htmlFor="proto-port">Port</label>
+                    <input
+                      id="proto-port"
+                      type="number"
+                      min="1"
+                      max="65535"
+                      value={protocolForm.port}
+                      onChange={e => setProtocolForm(prev => ({ ...prev, port: e.target.value }))}
+                      className="input font-mono"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-dark-300 text-xs font-semibold" htmlFor="proto-user">Utilisateur / Login</label>
+                    <input
+                      id="proto-user"
+                      type="text"
+                      placeholder="Ex: microlinks_user"
+                      value={protocolForm.utilisateur}
+                      onChange={e => setProtocolForm(prev => ({ ...prev, utilisateur: e.target.value }))}
+                      className="input font-mono"
+                      autoComplete="off"
+                    />
+                  </div>
+                </div>
+
+                {/* Mot de passe */}
+                <div className="space-y-1.5">
+                  <label className="text-dark-300 text-xs font-semibold" htmlFor="proto-pwd">Mot de passe / Passphrase</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-2.5 w-4 h-4 text-dark-400" />
+                    <input
+                      id="proto-pwd"
+                      type="password"
+                      placeholder="Laissez vide pour conserver l'actuel"
+                      value={protocolForm.motDePasse}
+                      onChange={e => setProtocolForm(prev => ({ ...prev, motDePasse: e.target.value }))}
+                      className="input pl-9"
+                      autoComplete="new-password"
+                    />
+                  </div>
+                  <p className="text-[10px] text-dark-400">Le mot de passe est chiffré. Laissez vide pour ne pas le modifier.</p>
+                </div>
+
+                {/* Répertoires */}
+                <div className="border-t border-white/5 pt-4 space-y-4">
+                  <p className="text-dark-300 text-xs font-semibold uppercase tracking-wide flex items-center gap-1.5">
+                    <FolderInput className="w-3.5 h-3.5" /> Répertoires sur le serveur
+                  </p>
+
+                  <div className="space-y-1.5">
+                    <label className="text-dark-300 text-xs font-semibold" htmlFor="proto-in">
+                      <FolderInput className="inline w-3.5 h-3.5 mr-1 text-green-400" />
+                      Répertoire d'entrée (réception) *
+                    </label>
+                    <input
+                      id="proto-in"
+                      type="text"
+                      placeholder="Ex: /microlinks/entree"
+                      value={protocolForm.repertoireEntree}
+                      onChange={e => setProtocolForm(prev => ({ ...prev, repertoireEntree: e.target.value }))}
+                      className="input font-mono text-green-300"
+                      autoComplete="off"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-dark-300 text-xs font-semibold" htmlFor="proto-out">
+                      <FolderOutput className="inline w-3.5 h-3.5 mr-1 text-blue-400" />
+                      Répertoire de sortie (émission) *
+                    </label>
+                    <input
+                      id="proto-out"
+                      type="text"
+                      placeholder="Ex: /microlinks/sortie"
+                      value={protocolForm.repertoireSortie}
+                      onChange={e => setProtocolForm(prev => ({ ...prev, repertoireSortie: e.target.value }))}
+                      className="input font-mono text-blue-300"
+                      autoComplete="off"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-dark-300 text-xs font-semibold" htmlFor="proto-arch">
+                      <Archive className="inline w-3.5 h-3.5 mr-1 text-amber-400" />
+                      Répertoire d'archivage
+                    </label>
+                    <input
+                      id="proto-arch"
+                      type="text"
+                      placeholder="Ex: /microlinks/archive"
+                      value={protocolForm.repertoireArchivage}
+                      onChange={e => setProtocolForm(prev => ({ ...prev, repertoireArchivage: e.target.value }))}
+                      className="input font-mono text-amber-300"
+                      autoComplete="off"
+                    />
+                  </div>
+                </div>
+
+                {/* Types de fichiers échangeables */}
+                <div className="border-t border-white/5 pt-4 space-y-4">
+                  <p className="text-dark-300 text-xs font-semibold uppercase tracking-wide">
+                    Types de fichiers échangeables
+                  </p>
+
+                  {/* Fichiers envoyés vers la plateforme */}
+                  <div className="space-y-2">
+                    <label className="text-dark-300 text-xs font-medium flex items-center gap-1.5">
+                      <FolderOutput className="w-3.5 h-3.5 text-blue-400" />
+                      Fichiers émis (envoyés vers la plateforme)
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {['MT', 'MX', 'AFB', 'CSV', 'XLSX', 'XML', 'JSON'].map(type => {
+                        const selected = (protocolForm.typesFichiersEnvoi || []).includes(type);
+                        return (
+                          <button
+                            key={type}
+                            type="button"
+                            onClick={() => setProtocolForm(prev => ({
+                              ...prev,
+                              typesFichiersEnvoi: selected
+                                ? (prev.typesFichiersEnvoi || []).filter(t => t !== type)
+                                : [...(prev.typesFichiersEnvoi || []), type]
+                            }))}
+                            className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                              selected
+                                ? 'bg-blue-500/20 border-blue-500/50 text-blue-300 shadow-sm shadow-blue-500/10'
+                                : 'bg-dark-800/60 border-dark-600 text-dark-400 hover:border-blue-500/30 hover:text-dark-200'
+                            }`}
+                          >
+                            {selected && <span className="mr-1">✓</span>}{type}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Fichiers reçus depuis la plateforme */}
+                  <div className="space-y-2">
+                    <label className="text-dark-300 text-xs font-medium flex items-center gap-1.5">
+                      <FolderInput className="w-3.5 h-3.5 text-green-400" />
+                      Fichiers reçus (depuis la plateforme)
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {['MT', 'MX', 'AFB', 'CSV', 'XLSX', 'XML', 'JSON'].map(type => {
+                        const selected = (protocolForm.typesFichiersReception || []).includes(type);
+                        return (
+                          <button
+                            key={type}
+                            type="button"
+                            onClick={() => setProtocolForm(prev => ({
+                              ...prev,
+                              typesFichiersReception: selected
+                                ? (prev.typesFichiersReception || []).filter(t => t !== type)
+                                : [...(prev.typesFichiersReception || []), type]
+                            }))}
+                            className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                              selected
+                                ? 'bg-green-500/20 border-green-500/50 text-green-300 shadow-sm shadow-green-500/10'
+                                : 'bg-dark-800/60 border-dark-600 text-dark-400 hover:border-green-500/30 hover:text-dark-200'
+                            }`}
+                          >
+                            {selected && <span className="mr-1">✓</span>}{type}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Infos protocole */}
+                <div className={`p-3 rounded-lg text-xs border ${
+                  protocolForm.protocole === 'SFTP'
+                    ? 'bg-cyan-500/5 border-cyan-500/20 text-cyan-300'
+                    : protocolForm.protocole === 'FTPS'
+                    ? 'bg-purple-500/5 border-purple-500/20 text-purple-300'
+                    : 'bg-amber-500/5 border-amber-500/20 text-amber-300'
+                }`}>
+                  {protocolForm.protocole === 'SFTP' && '🔒 SFTP utilise SSH pour chiffrer les données. Port par défaut : 22.'}
+                  {protocolForm.protocole === 'FTPS' && '🔐 FTPS utilise TLS/SSL pour sécuriser la connexion FTP. Port par défaut : 990.'}
+                  {protocolForm.protocole === 'FTP' && '⚠️ FTP transmet les données en clair. Utiliser uniquement sur un réseau privé sécurisé. Port par défaut : 21.'}
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <button
+                    type="submit"
+                    disabled={savingProtocol}
+                    className="btn-primary px-5 py-2 flex items-center gap-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg transition-colors border-none shadow-lg shadow-cyan-900/20"
+                  >
+                    {savingProtocol ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    Enregistrer la configuration
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
         </div>
       )}
 

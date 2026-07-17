@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!-- =====================================================================
+         009 : Ajout des champs de configuration du protocole d'échange
+               accessible par l'admin de chaque établissement
+         ===================================================================== -->
+
+    <changeSet id="009-add-protocole-echange" author="antigravity">
+
+        <!-- Type de protocole : SFTP, FTP, FTPS -->
+        <addColumn tableName="institutions">
+            <column name="protocole_echange" type="varchar(10)" defaultValue="SFTP"
+                    remarks="Protocole d'échange de fichiers : SFTP, FTP ou FTPS"/>
+        </addColumn>
+
+        <!-- Adresse IP du serveur (en complément du nom d'hôte) -->
+        <addColumn tableName="institutions">
+            <column name="sftp_adresse_ip" type="varchar(45)"
+                    remarks="Adresse IP du serveur d'échange (IPv4 ou IPv6)"/>
+        </addColumn>
+
+        <!-- Indicateur d'activation de la configuration -->
+        <addColumn tableName="institutions">
+            <column name="protocole_actif" type="boolean" defaultValueBoolean="false"
+                    remarks="Indique si la configuration du protocole d'échange est active"/>
+        </addColumn>
+
+    </changeSet>
+
+</databaseChangeLog>

@@ -62,27 +62,50 @@ export function AuthProvider({ children }) {
         let institutionId = Array.isArray(rawInstitutionId) ? rawInstitutionId[0] : rawInstitutionId;
         let institutionNom = Array.isArray(rawInstitutionNom) ? rawInstitutionNom[0] : rawInstitutionNom;
 
-        // Fallback : si institution_id absent du token, chercher via le username
-        if (!institutionId) {
-          console.warn('institution_id absent du JWT, tentative de récupération via API...');
+        // Validation / Résolution de l'institutionId
+        let resolvedInstitution = null;
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        
+        if (institutionId) {
+          if (uuidRegex.test(institutionId)) {
+            // C'est un UUID, on vérifie s'il existe dans la base de données
+            try {
+              const res = await institutionApi.findById(institutionId);
+              resolvedInstitution = res.data;
+              console.log('institution_id (UUID) validé avec succès:', institutionId);
+            } catch (e) {
+              console.warn('L\'institution avec l\'UUID du token n\'existe pas dans la BD, tentative de résolution...', institutionId);
+            }
+          }
+          
+          if (!resolvedInstitution) {
+            // Si pas trouvé ou si ce n'était pas un UUID, on essaye de chercher par le code/sigle
+            try {
+              const res = await institutionApi.findByCode(institutionId.toUpperCase());
+              resolvedInstitution = res.data;
+              console.log('institution_id résolu via code:', resolvedInstitution.id);
+            } catch (e) {
+              console.warn('Résolution de institutionId via code échouée:', e.message);
+            }
+          }
+        }
+
+        // Si toujours non résolu, on utilise le username comme fallback
+        if (!resolvedInstitution) {
+          console.warn('Tentative de récupération de l\'institution via le username...');
           try {
             const username = tokenParsed?.preferred_username;
             if (username) {
-              // Le format username est : sigle.admin, sigle.agent, sigle.valid
-              // Extraire le préfixe institution (le sigle en minuscules)
-              const parts = username.split('.');
-              if (parts.length >= 2) {
-                const sigle = parts[0].toUpperCase();
-                // Essayer d'abord par le champ 'code'
+              const sigle = username.includes('@')
+                ? username.split('@')[1].split('.')[0].toUpperCase()
+                : username.split('.')[0].toUpperCase();
+
+              if (sigle) {
                 try {
                   const res = await institutionApi.findByCode(sigle);
-                  if (res.data) {
-                    institutionId = res.data.id;
-                    institutionNom = res.data.nom;
-                    console.log('institution_id récupéré via API (code):', institutionId);
-                  }
+                  resolvedInstitution = res.data;
+                  console.log('institution récupérée via username (code):', resolvedInstitution.id);
                 } catch (_) {
-                  // Si échec, essayer de rechercher dans la liste en comparant les codes/sigles normalisés
                   try {
                     const listRes = await institutionApi.findAll({ size: 100 });
                     const cleanSigle = sigle.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -92,9 +115,8 @@ export function AuthProvider({ children }) {
                       return normSigle === cleanSigle || normCode === cleanSigle;
                     });
                     if (found) {
-                      institutionId = found.id;
-                      institutionNom = found.nom;
-                      console.log('institution_id récupéré via recherche liste (normalisé):', institutionId);
+                      resolvedInstitution = found;
+                      console.log('institution récupérée via username et recherche liste:', resolvedInstitution.id);
                     }
                   } catch (e2) {
                     console.warn('Impossible de récupérer institution via liste:', e2.message);
@@ -103,8 +125,15 @@ export function AuthProvider({ children }) {
               }
             }
           } catch (e) {
-            console.warn('Impossible de récupérer institution via API:', e.message);
+            console.warn('Erreur lors du fallback username:', e.message);
           }
+        }
+
+        if (resolvedInstitution) {
+          institutionId = resolvedInstitution.id;
+          institutionNom = resolvedInstitution.nom;
+        } else {
+          console.error("Aucune institution correspondante n'a pu être trouvée dans la base de données.");
         }
 
 

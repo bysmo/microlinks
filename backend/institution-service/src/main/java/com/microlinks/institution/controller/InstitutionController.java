@@ -113,7 +113,7 @@ public class InstitutionController {
         return ResponseEntity.ok(institutionService.getStats());
     }
 
-    // ===================== Configuration SFTP (Admin uniquement) =====================
+    // ===================== Configuration SFTP (Admin plateforme uniquement) =====================
 
     @GetMapping("/{id}/sftp")
     @Operation(summary = "Récupérer la configuration SFTP d'une institution (admin uniquement)")
@@ -131,4 +131,54 @@ public class InstitutionController {
             @AuthenticationPrincipal Jwt jwt) {
         return ResponseEntity.ok(institutionService.updateSftpConfig(id, request, jwt.getSubject()));
     }
+
+    // ===================== Protocole d'échange (Admin Institution) =====================
+
+    @GetMapping("/{id}/protocole-echange")
+    @Operation(summary = "Récupérer la configuration du protocole d'échange (admin institution)")
+    @PreAuthorize("hasAnyRole('ADMIN_PLATEFORME', 'ADMIN_INSTITUTION')")
+    public ResponseEntity<com.microlinks.institution.dto.ProtocoleEchangeDto> getProtocoleEchange(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal Jwt jwt) {
+
+        // Vérifier que l'admin institution accède bien à sa propre institution
+        if (!isAllowedForInstitution(jwt, id)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        return ResponseEntity.ok(institutionService.getProtocoleEchange(id));
+    }
+
+    @PutMapping("/{id}/protocole-echange")
+    @Operation(summary = "Configurer le protocole d'échange d'une institution (admin institution)")
+    @PreAuthorize("hasAnyRole('ADMIN_PLATEFORME', 'ADMIN_INSTITUTION')")
+    public ResponseEntity<com.microlinks.institution.dto.ProtocoleEchangeDto> updateProtocoleEchange(
+            @PathVariable UUID id,
+            @Valid @RequestBody com.microlinks.institution.dto.ProtocoleEchangeRequest request,
+            @AuthenticationPrincipal Jwt jwt) {
+
+        if (!isAllowedForInstitution(jwt, id)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        return ResponseEntity.ok(institutionService.updateProtocoleEchange(id, request, jwt.getSubject()));
+    }
+
+    // ===================== Helper: vérification de l'accès à une institution =====================
+
+    private boolean isAllowedForInstitution(Jwt jwt, UUID institutionId) {
+        // ADMIN_PLATEFORME peut accéder à toutes les institutions
+        java.util.Map<String, Object> realmAccess = jwt.getClaimAsMap("realm_access");
+        if (realmAccess != null && realmAccess.containsKey("roles")) {
+            @SuppressWarnings("unchecked")
+            java.util.List<String> roles = (java.util.List<String>) realmAccess.get("roles");
+            if (roles.contains("ADMIN_PLATEFORME")) return true;
+        }
+        // ADMIN_INSTITUTION ne peut accéder qu'à sa propre institution
+        String userInstitutionId = jwt.getClaimAsString("institution_id");
+        if (userInstitutionId == null) {
+            java.util.List<String> instIds = jwt.getClaimAsStringList("institution_id");
+            if (instIds != null && !instIds.isEmpty()) userInstitutionId = instIds.get(0);
+        }
+        return userInstitutionId != null && userInstitutionId.equals(institutionId.toString());
+    }
 }
+

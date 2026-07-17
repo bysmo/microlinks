@@ -94,9 +94,17 @@ public class Institution {
 
     // ===================== Configuration SFTP (admin uniquement) =====================
 
-    /** Hôte SFTP de l'institution (adresse IP ou nom de domaine) */
+    /** Protocole d'échange : SFTP, FTP, FTPS */
+    @Column(name = "protocole_echange", length = 10)
+    private String protocoleEchange;
+
+    /** Hôte SFTP de l'institution (nom de domaine) */
     @Column(name = "sftp_host", length = 200)
     private String sftpHost;
+
+    /** Adresse IP du serveur d'échange */
+    @Column(name = "sftp_adresse_ip", length = 45)
+    private String sftpAdresseIp;
 
     /** Port SFTP (défaut : 22) */
     @Column(name = "sftp_port")
@@ -127,6 +135,12 @@ public class Institution {
     /** Répertoire SFTP où les fichiers traités sont archivés */
     @Column(name = "sftp_repertoire_archivage", length = 500)
     private String sftpRepertoireArchivage;
+
+    /** Indique si la configuration du protocole d'échange est active */
+    @Column(name = "protocole_actif")
+    @Builder.Default
+    private Boolean protocoleActif = false;
+
 
     // ===================== Types de fichiers échangeables =====================
 
