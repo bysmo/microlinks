@@ -72,6 +72,8 @@ export const userApi = {
   create: (institutionId, data) => api.post(`/api/v1/institutions/${institutionId}/users`, data),
   updateStatus: (institutionId, userId, enabled) => api.patch(`/api/v1/institutions/${institutionId}/users/${userId}/status`, null, { params: { enabled } }),
   updateMyPin: (institutionId, pin) => api.put(`/api/v1/institutions/${institutionId}/users/me/pin`, null, { params: { pin } }),
+  updateMyPassword: (institutionId, data) => api.put(`/api/v1/institutions/${institutionId}/users/me/password`, data),
+  updateMyProfile: (institutionId, data) => api.put(`/api/v1/institutions/${institutionId}/users/me/profile`, data),
 };
 
 // ======================== PROTOCOLES D'ÉCHANGE (SFTP/FTP/FTPS) ========================
@@ -79,6 +81,7 @@ export const userApi = {
 export const protocolApi = {
   get: (institutionId) => api.get(`/api/v1/institutions/${institutionId}/protocole-echange`),
   upsert: (institutionId, data) => api.put(`/api/v1/institutions/${institutionId}/protocole-echange`, data),
+  testConnection: (institutionId, sens, data) => api.post(`/api/v1/institutions/${institutionId}/protocole-echange/test?sens=${sens}`, data),
 };
 
 // ======================== ZONES MONETAIRES ========================

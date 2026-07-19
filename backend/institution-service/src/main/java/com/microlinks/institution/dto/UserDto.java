@@ -14,4 +14,5 @@ public class UserDto {
     private String role; // AGENT, VALID, ADMIN, LECTEUR
     private boolean enabled;
     private UUID institutionId;
+    private String gender;
 }

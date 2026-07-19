@@ -92,13 +92,9 @@ public class Institution {
     @OneToMany(mappedBy = "institutionProprietaire", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<CompteCorrespondance> comptesCorrespondance;
 
-    // ===================== Configuration SFTP (admin uniquement) =====================
+    // ===================== Protocole d'échange — Serveur partagé =====================
 
-    /** Protocole d'échange : SFTP, FTP, FTPS */
-    @Column(name = "protocole_echange", length = 10)
-    private String protocoleEchange;
-
-    /** Hôte SFTP de l'institution (nom de domaine) */
+    /** Hôte du serveur d'échange (nom de domaine ou IP) */
     @Column(name = "sftp_host", length = 200)
     private String sftpHost;
 
@@ -106,43 +102,98 @@ public class Institution {
     @Column(name = "sftp_adresse_ip", length = 45)
     private String sftpAdresseIp;
 
-    /** Port SFTP (défaut : 22) */
-    @Column(name = "sftp_port")
-    private Integer sftpPort;
+    /** Indique si la configuration du protocole d'échange est active */
+    @Column(name = "protocole_actif")
+    @Builder.Default
+    private Boolean protocoleActif = false;
 
-    /** Nom d'utilisateur SFTP */
-    @Column(name = "sftp_user", length = 100)
-    private String sftpUser;
+    // ===================== Sens ENTRÉE (réception depuis la plateforme) =====================
 
-    /** Mot de passe SFTP chiffré en AES-256/GCM */
+    /** Protocole ENTRÉE : SFTP, FTP, FTPS */
+    @Column(name = "protocole_entree", length = 10)
+    private String protocoleEntree;
+
+    /** Type de fichier unique pour les ENTRÉES : MT, MX, AFB, CSV, XLSX, XML, JSON */
+    @Column(name = "type_fichier_entree", length = 10)
+    private String typeFichierEntree;
+
+    /** Répertoire ENTRÉE sur le serveur (réception depuis la plateforme) */
+    @Column(name = "repertoire_entree", length = 500)
+    private String repertoireEntree;
+
+    /** Nom d'utilisateur / login pour les ENTRÉES */
+    @Column(name = "utilisateur_entree", length = 100)
+    private String utilisateurEntree;
+
+    /** Port de connexion pour les ENTRÉES */
+    @Column(name = "port_entree")
+    private Integer portEntree;
+
+    /** Mot de passe ENTRÉE chiffré en AES-256/GCM */
     @Convert(converter = SensitiveStringConverter.class)
-    @Column(name = "sftp_password", columnDefinition = "TEXT")
-    private String sftpPassword;
+    @Column(name = "mot_de_passe_entree", columnDefinition = "TEXT")
+    private String motDePasseEntree;
+
+    // ===================== Sens SORTIE (émission vers la plateforme) =====================
+
+    /** Protocole SORTIE : SFTP, FTP, FTPS */
+    @Column(name = "protocole_sortie", length = 10)
+    private String protocoleSortie;
+
+    /** Type de fichier unique pour les SORTIES : MT, MX, AFB, CSV, XLSX, XML, JSON */
+    @Column(name = "type_fichier_sortie", length = 10)
+    private String typeFichierSortie;
+
+    /** Répertoire SORTIE sur le serveur (émission vers la plateforme) */
+    @Column(name = "repertoire_sortie", length = 500)
+    private String repertoireSortie;
+
+    /** Nom d'utilisateur / login pour les SORTIES */
+    @Column(name = "utilisateur_sortie", length = 100)
+    private String utilisateurSortie;
+
+    /** Port de connexion pour les SORTIES */
+    @Column(name = "port_sortie")
+    private Integer portSortie;
+
+    /** Mot de passe SORTIE chiffré en AES-256/GCM */
+    @Convert(converter = SensitiveStringConverter.class)
+    @Column(name = "mot_de_passe_sortie", columnDefinition = "TEXT")
+    private String motDePasseSortie;
+
+    // ===================== Anciens champs SFTP conservés pour compatibilité (admin plateforme) =====================
 
     /** Clé privée SSH chiffrée en AES-256/GCM (alternative au mot de passe) */
     @Convert(converter = SensitiveStringConverter.class)
     @Column(name = "sftp_private_key", columnDefinition = "TEXT")
     private String sftpPrivateKey;
 
-    /** Répertoire SFTP où l'institution dépose ses fichiers à envoyer vers la plateforme */
+    /** Mot de passe SFTP admin chiffré en AES-256/GCM */
+    @Convert(converter = SensitiveStringConverter.class)
+    @Column(name = "sftp_password", columnDefinition = "TEXT")
+    private String sftpPassword;
+
+    /** Utilisateur SFTP admin */
+    @Column(name = "sftp_user", length = 100)
+    private String sftpUser;
+
+    /** Port SFTP admin */
+    @Column(name = "sftp_port")
+    private Integer sftpPort;
+
+    /** Répertoire d'envoi SFTP admin */
     @Column(name = "sftp_repertoire_envoi", length = 500)
     private String sftpRepertoireEnvoi;
 
-    /** Répertoire SFTP où la plateforme dépose les fichiers destinés à cette institution */
+    /** Répertoire de réception SFTP admin */
     @Column(name = "sftp_repertoire_reception", length = 500)
     private String sftpRepertoireReception;
 
-    /** Répertoire SFTP où les fichiers traités sont archivés */
+    /** Répertoire d'archivage SFTP admin */
     @Column(name = "sftp_repertoire_archivage", length = 500)
     private String sftpRepertoireArchivage;
 
-    /** Indique si la configuration du protocole d'échange est active */
-    @Column(name = "protocole_actif")
-    @Builder.Default
-    private Boolean protocoleActif = false;
-
-
-    // ===================== Types de fichiers échangeables =====================
+    // ===================== Types de fichiers échangeables (anciens champs — conservés pour compatibilité) =====================
 
     /** Types de fichiers que cette institution peut envoyer vers la plateforme */
     @ElementCollection(fetch = FetchType.EAGER)

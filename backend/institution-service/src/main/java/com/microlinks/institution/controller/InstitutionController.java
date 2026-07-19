@@ -162,6 +162,22 @@ public class InstitutionController {
         return ResponseEntity.ok(institutionService.updateProtocoleEchange(id, request, jwt.getSubject()));
     }
 
+    @PostMapping("/{id}/protocole-echange/test")
+    @Operation(summary = "Tester la connexion SFTP/FTP/FTPS d'un sens d'échange")
+    @PreAuthorize("hasAnyRole('ADMIN_PLATEFORME', 'ADMIN_INSTITUTION')")
+    public ResponseEntity<com.microlinks.institution.dto.TestConnexionResponse> testProtocoleConnection(
+            @PathVariable UUID id,
+            @RequestParam String sens,
+            @Valid @RequestBody com.microlinks.institution.dto.ProtocoleEchangeRequest request,
+            @AuthenticationPrincipal Jwt jwt) {
+
+        if (!isAllowedForInstitution(jwt, id)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        return ResponseEntity.ok(institutionService.testProtocoleConnection(id, sens, request));
+    }
+
+
     // ===================== Helper: vérification de l'accès à une institution =====================
 
     private boolean isAllowedForInstitution(Jwt jwt, UUID institutionId) {

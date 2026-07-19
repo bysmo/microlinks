@@ -191,7 +191,7 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider value={{
       isAuthenticated, user, token, roles, rawRoles,
       isLoading, authError, logout, hasRole, hasAnyRole, hasRawRole,
-      canSaisirOperation, canValiderOperation, keycloak
+      canSaisirOperation, canValiderOperation, keycloak, setUser
     }}>
       {children}
     </AuthContext.Provider>

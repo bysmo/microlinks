@@ -2,6 +2,8 @@ package com.microlinks.institution.controller;
 
 import com.microlinks.institution.dto.UserCreateRequest;
 import com.microlinks.institution.dto.UserDto;
+import com.microlinks.institution.dto.UserUpdateRequest;
+import com.microlinks.institution.dto.PasswordChangeRequest;
 import com.microlinks.institution.entity.Institution;
 import com.microlinks.institution.exception.BusinessException;
 import com.microlinks.institution.exception.ResourceNotFoundException;
@@ -92,6 +94,36 @@ public class InstitutionUserController {
     }
 
 
+
+    @PutMapping("/me/profile")
+    @Operation(summary = "Mettre à jour ses propres informations de profil")
+    public ResponseEntity<Void> updateMyProfile(
+            @PathVariable UUID institutionId,
+            @Valid @RequestBody UserUpdateRequest request,
+            @AuthenticationPrincipal Jwt jwt) {
+        
+        validateAccess(institutionId, jwt);
+        String userId = jwt.getSubject();
+        keycloakProvisioningService.updateUserProfile(userId, request);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/me/password")
+    @Operation(summary = "Changer son propre mot de passe")
+    public ResponseEntity<Void> updateMyPassword(
+            @PathVariable UUID institutionId,
+            @Valid @RequestBody PasswordChangeRequest request,
+            @AuthenticationPrincipal Jwt jwt) {
+        
+        validateAccess(institutionId, jwt);
+        String userId = jwt.getSubject();
+        String username = jwt.getClaimAsString("preferred_username");
+        if (username == null) {
+            username = jwt.getClaimAsString("username");
+        }
+        keycloakProvisioningService.updateUserPassword(userId, username, request.getCurrentPassword(), request.getNewPassword());
+        return ResponseEntity.noContent().build();
+    }
 
     @PutMapping("/me/pin")
     @Operation(summary = "Mettre à jour son propre code PIN de sécurité")

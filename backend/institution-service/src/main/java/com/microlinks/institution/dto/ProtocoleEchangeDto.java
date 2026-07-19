@@ -1,51 +1,31 @@
 package com.microlinks.institution.dto;
 
-import com.microlinks.institution.entity.TypeFichierEchange;
 import lombok.Data;
-import java.util.List;
 
 /**
  * DTO de configuration du protocole d'échange de fichiers d'une institution.
  * Accessible par ADMIN_INSTITUTION et ADMIN_PLATEFORME.
  * Les données sensibles (mot de passe) ne sont jamais retournées.
+ *
+ * La configuration est séparée en deux sens indépendants :
+ * - {@code entree} : fichiers reçus depuis la plateforme vers l'institution
+ * - {@code sortie} : fichiers envoyés par l'institution vers la plateforme
  */
 @Data
 public class ProtocoleEchangeDto {
 
-    /** Protocole utilisé : SFTP, FTP, FTPS */
-    private String protocole;
-
-    /** Nom d'hôte du serveur (IP ou nom de domaine) */
+    /** Nom d'hôte du serveur partagé (IP ou nom de domaine) */
     private String nomHote;
 
-    /** Adresse IP du serveur */
+    /** Adresse IP du serveur partagé */
     private String adresseIp;
 
-    /** Port de connexion (défaut : 22 pour SFTP, 21 pour FTP, 990 pour FTPS) */
-    private String port;
+    /** Configuration du sens ENTRÉE (réception depuis la plateforme) */
+    private SensEchangeDto entree;
 
-    /** Nom d'utilisateur */
-    private String utilisateur;
-
-    /** Indique si un mot de passe est configuré (sans révéler sa valeur) */
-    private boolean motDePasseConfigured;
-
-    /** Répertoire d'entrée (réception des fichiers entrants) */
-    private String repertoireEntree;
-
-    /** Répertoire de sortie (émission des fichiers vers la plateforme) */
-    private String repertoireSortie;
-
-    /** Répertoire d'archivage des fichiers traités */
-    private String repertoireArchivage;
-
-    /** Types de fichiers que cette institution peut envoyer vers la plateforme */
-    private List<TypeFichierEchange> typesFichiersEnvoi;
-
-    /** Types de fichiers que cette institution peut recevoir de la plateforme */
-    private List<TypeFichierEchange> typesFichiersReception;
+    /** Configuration du sens SORTIE (émission vers la plateforme) */
+    private SensEchangeDto sortie;
 
     /** Indique si la configuration est active */
     private Boolean actif;
 }
-

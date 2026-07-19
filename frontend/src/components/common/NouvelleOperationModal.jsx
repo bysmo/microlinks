@@ -126,7 +126,6 @@ export default function NouvelleOperationModal({ isOpen, onClose, onSuccess }) {
   // Data
   const [myInstitution, setMyInstitution] = useState(null);
   const [allInstitutions, setAllInstitutions] = useState([]);
-  const [banques, setBanques] = useState([]);
   const [mesComptesEmetteur, setMesComptesEmetteur] = useState([]);  // Tous les comptes de l'institution émettrice
   const [comptesRecepteur, setComptesRecepteur] = useState([]);       // Tous les comptes de l'institution bénéficiaire
   const [loadingInst, setLoadingInst] = useState(false);
@@ -158,7 +157,6 @@ export default function NouvelleOperationModal({ isOpen, onClose, onSuccess }) {
       .then(res => {
         const all = res?.data?.content || [];
         setAllInstitutions(all);
-        setBanques(all.filter(i => i.typeInstitution === 'BANQUE'));
       })
       .catch(() => toast.error('Erreur de chargement des institutions'));
 
@@ -237,21 +235,27 @@ export default function NouvelleOperationModal({ isOpen, onClose, onSuccess }) {
           // Banque → émetteur figé à elle-même
           defaults.banqueCorrespondanteEmettriceId = mine.id;
           defaults.nomBanqueCorrespondanteEmettrice = mine.nom;
-          // Pré-sélectionner le compte de règlement si unique
-          if (comptes.length === 1) {
+          // Pré-sélectionner le premier compte de règlement disponible
+          if (comptes.length >= 1) {
             defaults.compteCorrespondanceEmetteurId = comptes[0].id;
             defaults.compteCorrespondanceEmetteur = comptes[0].numeroCompte;
           }
         } else {
-          // MESO/MICRO → banque correspondante configurée par défaut
-          if (mine.banqueCorrespondanteId) {
-            defaults.banqueCorrespondanteEmettriceId = mine.banqueCorrespondanteId;
-            defaults.nomBanqueCorrespondanteEmettrice = mine.banqueCorrespondanteNom || '';
-            // Pré-sélectionner comptes liés à cette banque
+          // MESO/MICRO → banque correspondante par défaut définie sur l'institution
+          // Si aucune banque par défaut, on prend la première banque liée via les comptes
+          const banqueDefaultId = mine.banqueCorrespondanteId
+            || (comptes.length > 0 && comptes[0].banqueDomiciliaireId ? comptes[0].banqueDomiciliaireId : '');
+          const banqueDefaultNom = mine.banqueCorrespondanteNom
+            || (comptes.length > 0 ? comptes[0].banqueDomiciliaireNom || '' : '');
+
+          if (banqueDefaultId) {
+            defaults.banqueCorrespondanteEmettriceId = banqueDefaultId;
+            defaults.nomBanqueCorrespondanteEmettrice = banqueDefaultNom;
+            // Pré-sélectionner le premier compte lié à cette banque
             const filteredByBank = comptes.filter(
-              c => c.banqueDomiciliaireId && String(c.banqueDomiciliaireId).trim() === String(mine.banqueCorrespondanteId).trim()
+              c => c.banqueDomiciliaireId && String(c.banqueDomiciliaireId).trim() === String(banqueDefaultId).trim()
             );
-            if (filteredByBank.length === 1) {
+            if (filteredByBank.length >= 1) {
               defaults.compteCorrespondanceEmetteurId = filteredByBank[0].id;
               defaults.compteCorrespondanceEmetteur = filteredByBank[0].numeroCompte;
             }
@@ -271,7 +275,47 @@ export default function NouvelleOperationModal({ isOpen, onClose, onSuccess }) {
   }, [isOpen, user]);
 
   // ────────────────────────────────────────────────────────────────────────────
-  // Comptes éMETTEUR filtrés par banque sélectionnée
+  // Banques disponibles côté ÉMETTEUR : uniquement celles liées aux comptes enregistrés
+  // ────────────────────────────────────────────────────────────────────────────
+  const banquesEmetteur = useMemo(() => {
+    if (!mesComptesEmetteur.length) return [];
+    const seen = new Set();
+    const result = [];
+    for (const c of mesComptesEmetteur) {
+      if (c.banqueDomiciliaireId && !seen.has(c.banqueDomiciliaireId)) {
+        seen.add(c.banqueDomiciliaireId);
+        result.push({
+          id: c.banqueDomiciliaireId,
+          nom: c.banqueDomiciliaireNom || c.banqueDomiciliaireId,
+          code: c.banqueDomiciliaireCode || '',
+        });
+      }
+    }
+    return result;
+  }, [mesComptesEmetteur]);
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // Banques disponibles côté RÉCEPTEUR : uniquement celles liées aux comptes enregistrés
+  // ────────────────────────────────────────────────────────────────────────────
+  const banquesRecepteur = useMemo(() => {
+    if (!comptesRecepteur.length) return [];
+    const seen = new Set();
+    const result = [];
+    for (const c of comptesRecepteur) {
+      if (c.banqueDomiciliaireId && !seen.has(c.banqueDomiciliaireId)) {
+        seen.add(c.banqueDomiciliaireId);
+        result.push({
+          id: c.banqueDomiciliaireId,
+          nom: c.banqueDomiciliaireNom || c.banqueDomiciliaireId,
+          code: c.banqueDomiciliaireCode || '',
+        });
+      }
+    }
+    return result;
+  }, [comptesRecepteur]);
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // Comptes ÉMETTEUR filtrés par banque sélectionnée
   // Comparaison en String() pour éviter tout problème de type UUID vs string
   // ────────────────────────────────────────────────────────────────────────────
   const comptesEmetteurFiltres = useMemo(() => {
@@ -338,10 +382,9 @@ export default function NouvelleOperationModal({ isOpen, onClose, onSuccess }) {
   // Les comptes sont déjà chargés à l'ouverture du modal — on filtre juste localement
   const handleBanqueEmettriceChange = useCallback((e) => {
     const selectedId = e.target.value;
-    const b = banques.find(b => b.id === selectedId);
+    const b = banquesEmetteur.find(b => b.id === selectedId);
 
     // Filtrage local des comptes déjà chargés par la banque sélectionnée
-    // (mesComptesEmetteur est chargé une fois à l'ouverture via compteReglementApi.findAll)
     const filtered = selectedId
       ? mesComptesEmetteur.filter(
           c => c.banqueDomiciliaireId && String(c.banqueDomiciliaireId).trim() === String(selectedId).trim()
@@ -352,11 +395,11 @@ export default function NouvelleOperationModal({ isOpen, onClose, onSuccess }) {
       ...prev,
       banqueCorrespondanteEmettriceId: selectedId,
       nomBanqueCorrespondanteEmettrice: b?.nom || '',
-      // Réinitialiser le compte et pré-sélectionner si un seul disponible
-      compteCorrespondanceEmetteurId: filtered.length === 1 ? filtered[0].id : '',
-      compteCorrespondanceEmetteur: filtered.length === 1 ? filtered[0].numeroCompte : '',
+      // Réinitialiser le compte et pré-sélectionner le premier disponible
+      compteCorrespondanceEmetteurId: filtered.length >= 1 ? filtered[0].id : '',
+      compteCorrespondanceEmetteur: filtered.length >= 1 ? filtered[0].numeroCompte : '',
     }));
-  }, [banques, mesComptesEmetteur]);
+  }, [banquesEmetteur, mesComptesEmetteur]);
 
   // Sélection du compte de règlement émetteur
   const handleCompteEmetteurChange = useCallback((e) => {
@@ -402,13 +445,17 @@ export default function NouvelleOperationModal({ isOpen, onClose, onSuccess }) {
     }
     setComptesRecepteur(comptes);
 
-    // Banque correspondante par défaut (définie dans le profil de l'institution)
-    const banqueDefaultId = selected.banqueCorrespondanteId || '';
-    const banqueDefaultNom = selected.banqueCorrespondanteNom || '';
+    // Banque correspondante par défaut :
+    // 1. Priorité à la banque définie sur le profil de l'institution bénéficiaire
+    // 2. Sinon, la première banque trouvée dans ses comptes de règlement
+    const banqueDefaultId = selected.banqueCorrespondanteId
+      || (comptes.length > 0 && comptes[0].banqueDomiciliaireId ? comptes[0].banqueDomiciliaireId : '');
+    const banqueDefaultNom = selected.banqueCorrespondanteNom
+      || (comptes.length > 0 ? comptes[0].banqueDomiciliaireNom || '' : '');
 
-    // Pré-sélectionner le compte si unique et correspondant à la banque par défaut
+    // Pré-sélectionner le premier compte correspondant à la banque par défaut
     const comptesForDefaultBank = banqueDefaultId
-      ? comptes.filter(c => c.banqueDomiciliaireId === banqueDefaultId)
+      ? comptes.filter(c => c.banqueDomiciliaireId && String(c.banqueDomiciliaireId).trim() === String(banqueDefaultId).trim())
       : comptes;
 
     setForm(prev => ({
@@ -417,8 +464,8 @@ export default function NouvelleOperationModal({ isOpen, onClose, onSuccess }) {
       nomInstitutionBeneficiaire: selected.nom,
       banqueCorrespondanteReceptriceId: banqueDefaultId,
       nomBanqueCorrespondanteReceptrice: banqueDefaultNom,
-      compteCorrespondanceRecepteurId: comptesForDefaultBank.length === 1 ? comptesForDefaultBank[0].id : '',
-      compteCorrespondanceRecepteur: comptesForDefaultBank.length === 1 ? comptesForDefaultBank[0].numeroCompte : '',
+      compteCorrespondanceRecepteurId: comptesForDefaultBank.length >= 1 ? comptesForDefaultBank[0].id : '',
+      compteCorrespondanceRecepteur: comptesForDefaultBank.length >= 1 ? comptesForDefaultBank[0].numeroCompte : '',
     }));
   }, [allInstitutions]);
 
@@ -439,19 +486,25 @@ export default function NouvelleOperationModal({ isOpen, onClose, onSuccess }) {
     });
   }, [comptesRecepteur]);
 
-  // Changement de banque réceptrice → réinitialise le compte récepteur
+  // Changement de banque réceptrice → pré-sélectionne le premier compte disponible
   const handleBanqueReceptriceChange = useCallback((e) => {
     const selectedId = e.target.value;
-    const b = banques.find(b => b.id === selectedId);
+    const b = banquesRecepteur.find(b => b.id === selectedId);
+    // Filtrer les comptes pour cette banque et pré-sélectionner le premier
+    const filtered = selectedId
+      ? comptesRecepteur.filter(
+          c => c.banqueDomiciliaireId && String(c.banqueDomiciliaireId).trim() === String(selectedId).trim()
+        )
+      : [];
     setForm(prev => ({
       ...prev,
       banqueCorrespondanteReceptriceId: selectedId,
       nomBanqueCorrespondanteReceptrice: b?.nom || '',
-      // Réinitialiser le compte car la banque change
-      compteCorrespondanceRecepteurId: '',
-      compteCorrespondanceRecepteur: '',
+      // Pré-sélectionner le premier compte disponible pour cette banque
+      compteCorrespondanceRecepteurId: filtered.length >= 1 ? filtered[0].id : '',
+      compteCorrespondanceRecepteur: filtered.length >= 1 ? filtered[0].numeroCompte : '',
     }));
-  }, [banques]);
+  }, [banquesRecepteur, comptesRecepteur]);
 
   // ────────────────────────────────────────────────────────────────────────────
   // Validation & soumission
@@ -660,7 +713,7 @@ export default function NouvelleOperationModal({ isOpen, onClose, onSuccess }) {
                 value={form.banqueCorrespondanteEmettriceId}
                 onChange={handleBanqueEmettriceChange}>
                 <option value="">— Choisir une banque —</option>
-                {banques.map(b => <option key={b.id} value={b.id}>{b.nom} ({b.code})</option>)}
+                {banquesEmetteur.map(b => <option key={b.id} value={b.id}>{b.nom}{b.code ? ` (${b.code})` : ''}</option>)}
               </SelectField>
             )}
 
@@ -822,7 +875,7 @@ export default function NouvelleOperationModal({ isOpen, onClose, onSuccess }) {
                   value={form.banqueCorrespondanteReceptriceId}
                   onChange={handleBanqueReceptriceChange}>
                   <option value="">— Choisir la banque —</option>
-                  {banques.map(b => <option key={b.id} value={b.id}>{b.nom} ({b.code})</option>)}
+                  {banquesRecepteur.map(b => <option key={b.id} value={b.id}>{b.nom}{b.code ? ` (${b.code})` : ''}</option>)}
                 </SelectField>
               )}
             </div>

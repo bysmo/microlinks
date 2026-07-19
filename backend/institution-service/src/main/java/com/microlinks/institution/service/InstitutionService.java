@@ -16,8 +16,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.util.ArrayList;
 import java.util.UUID;
+
 
 @Service
 @RequiredArgsConstructor
@@ -300,26 +304,40 @@ public class InstitutionService {
     public ProtocoleEchangeDto updateProtocoleEchange(UUID id, ProtocoleEchangeRequest request, String currentUser) {
         Institution institution = findInstitutionById(id);
 
-        if (request.getProtocole() != null) institution.setProtocoleEchange(request.getProtocole());
+        // Champs partagés (serveur)
         if (request.getNomHote() != null) institution.setSftpHost(request.getNomHote());
         if (request.getAdresseIp() != null) institution.setSftpAdresseIp(request.getAdresseIp());
-        if (request.getPort() != null) {
-            try { institution.setSftpPort(Integer.parseInt(request.getPort())); } catch (NumberFormatException ignored) {}
-        }
-        if (request.getUtilisateur() != null) institution.setSftpUser(request.getUtilisateur());
-        if (request.getMotDePasse() != null && !request.getMotDePasse().isBlank()) {
-            institution.setSftpPassword(request.getMotDePasse());
-        }
-        if (request.getRepertoireEntree() != null) institution.setSftpRepertoireReception(request.getRepertoireEntree());
-        if (request.getRepertoireSortie() != null) institution.setSftpRepertoireEnvoi(request.getRepertoireSortie());
-        if (request.getRepertoireArchivage() != null) institution.setSftpRepertoireArchivage(request.getRepertoireArchivage());
-        if (request.getTypesFichiersEnvoi() != null) {
-            institution.setTypesFichiersEnvoi(new ArrayList<>(request.getTypesFichiersEnvoi()));
-        }
-        if (request.getTypesFichiersReception() != null) {
-            institution.setTypesFichiersReception(new ArrayList<>(request.getTypesFichiersReception()));
-        }
         if (request.getActif() != null) institution.setProtocoleActif(request.getActif());
+
+        // Sens ENTRÉE
+        if (request.getEntree() != null) {
+            SensEchangeRequest e = request.getEntree();
+            if (e.getProtocole() != null) institution.setProtocoleEntree(e.getProtocole());
+            if (e.getTypeFichier() != null) institution.setTypeFichierEntree(e.getTypeFichier());
+            if (e.getRepertoire() != null) institution.setRepertoireEntree(e.getRepertoire());
+            if (e.getUtilisateur() != null) institution.setUtilisateurEntree(e.getUtilisateur());
+            if (e.getPort() != null) {
+                try { institution.setPortEntree(Integer.parseInt(e.getPort())); } catch (NumberFormatException ignored) {}
+            }
+            if (e.getMotDePasse() != null && !e.getMotDePasse().isBlank()) {
+                institution.setMotDePasseEntree(e.getMotDePasse());
+            }
+        }
+
+        // Sens SORTIE
+        if (request.getSortie() != null) {
+            SensEchangeRequest s = request.getSortie();
+            if (s.getProtocole() != null) institution.setProtocoleSortie(s.getProtocole());
+            if (s.getTypeFichier() != null) institution.setTypeFichierSortie(s.getTypeFichier());
+            if (s.getRepertoire() != null) institution.setRepertoireSortie(s.getRepertoire());
+            if (s.getUtilisateur() != null) institution.setUtilisateurSortie(s.getUtilisateur());
+            if (s.getPort() != null) {
+                try { institution.setPortSortie(Integer.parseInt(s.getPort())); } catch (NumberFormatException ignored) {}
+            }
+            if (s.getMotDePasse() != null && !s.getMotDePasse().isBlank()) {
+                institution.setMotDePasseSortie(s.getMotDePasse());
+            }
+        }
 
         institution.setUpdatedBy(currentUser);
         Institution saved = institutionRepository.save(institution);
@@ -387,20 +405,30 @@ public class InstitutionService {
 
     private ProtocoleEchangeDto toProtocoleDto(Institution i) {
         ProtocoleEchangeDto dto = new ProtocoleEchangeDto();
-        dto.setProtocole(i.getProtocoleEchange() != null ? i.getProtocoleEchange() : "SFTP");
         dto.setNomHote(i.getSftpHost());
         dto.setAdresseIp(i.getSftpAdresseIp());
-        dto.setPort(i.getSftpPort() != null ? String.valueOf(i.getSftpPort()) : "22");
-        dto.setUtilisateur(i.getSftpUser());
-        dto.setMotDePasseConfigured(i.getSftpPassword() != null && !i.getSftpPassword().isBlank());
-        // Entrée = réception (la plateforme dépose pour l'institution)
-        dto.setRepertoireEntree(i.getSftpRepertoireReception());
-        // Sortie = envoi (l'institution dépose vers la plateforme)
-        dto.setRepertoireSortie(i.getSftpRepertoireEnvoi());
-        dto.setRepertoireArchivage(i.getSftpRepertoireArchivage());
-        dto.setTypesFichiersEnvoi(i.getTypesFichiersEnvoi());
-        dto.setTypesFichiersReception(i.getTypesFichiersReception());
         dto.setActif(i.getProtocoleActif() != null ? i.getProtocoleActif() : false);
+
+        // Sens ENTRÉE
+        SensEchangeDto entreeDto = new SensEchangeDto();
+        entreeDto.setProtocole(i.getProtocoleEntree() != null ? i.getProtocoleEntree() : "SFTP");
+        entreeDto.setTypeFichier(i.getTypeFichierEntree());
+        entreeDto.setRepertoire(i.getRepertoireEntree());
+        entreeDto.setUtilisateur(i.getUtilisateurEntree());
+        entreeDto.setPort(i.getPortEntree() != null ? String.valueOf(i.getPortEntree()) : "22");
+        entreeDto.setMotDePasseConfigured(i.getMotDePasseEntree() != null && !i.getMotDePasseEntree().isBlank());
+        dto.setEntree(entreeDto);
+
+        // Sens SORTIE
+        SensEchangeDto sortieDto = new SensEchangeDto();
+        sortieDto.setProtocole(i.getProtocoleSortie() != null ? i.getProtocoleSortie() : "SFTP");
+        sortieDto.setTypeFichier(i.getTypeFichierSortie());
+        sortieDto.setRepertoire(i.getRepertoireSortie());
+        sortieDto.setUtilisateur(i.getUtilisateurSortie());
+        sortieDto.setPort(i.getPortSortie() != null ? String.valueOf(i.getPortSortie()) : "22");
+        sortieDto.setMotDePasseConfigured(i.getMotDePasseSortie() != null && !i.getMotDePasseSortie().isBlank());
+        dto.setSortie(sortieDto);
+
         return dto;
     }
 
@@ -421,6 +449,73 @@ public class InstitutionService {
     private Institution findInstitutionById(UUID id) {
         return institutionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Institution avec l'id " + id + " non trouvée"));
+    }
+
+    public TestConnexionResponse testProtocoleConnection(UUID id, String sens, ProtocoleEchangeRequest request) {
+        String hote = request.getNomHote();
+        String ip = request.getAdresseIp();
+        
+        String cible = (hote != null && !hote.isBlank()) ? hote : ip;
+        if (cible == null || cible.isBlank()) {
+            return TestConnexionResponse.builder()
+                    .success(false)
+                    .message("Nom d'hôte ou Adresse IP manquant")
+                    .details("Vous devez saisir un nom d'hôte ou une adresse IP valide pour tester la connexion.")
+                    .build();
+        }
+
+        SensEchangeRequest configSens = "entree".equalsIgnoreCase(sens) ? request.getEntree() : request.getSortie();
+        if (configSens == null) {
+            return TestConnexionResponse.builder()
+                    .success(false)
+                    .message("Configuration du sens d'échange '" + sens + "' manquante")
+                    .details("Veuillez remplir les informations de cette section avant de tester.")
+                    .build();
+        }
+
+        int port = 22;
+        if (configSens.getPort() != null && !configSens.getPort().isBlank()) {
+            try {
+                port = Integer.parseInt(configSens.getPort());
+            } catch (NumberFormatException e) {
+                return TestConnexionResponse.builder()
+                        .success(false)
+                        .message("Port invalide : " + configSens.getPort())
+                        .details("Le numéro de port doit être un entier valide.")
+                        .build();
+            }
+        } else {
+            String proto = configSens.getProtocole();
+            if ("FTPS".equalsIgnoreCase(proto)) port = 990;
+            else if ("FTP".equalsIgnoreCase(proto)) port = 21;
+        }
+
+        String protocole = configSens.getProtocole() != null ? configSens.getProtocole() : "SFTP";
+        String utilisateur = configSens.getUtilisateur();
+
+        log.info("Test de connexion vers {} sur le port {} ({}) pour l'institution {}", cible, port, protocole, id);
+
+        try (Socket socket = new Socket()) {
+            socket.connect(new InetSocketAddress(cible, port), 3000);
+            
+            String details = String.format("Connexion TCP établie avec succès avec %s sur le port %d (%s).\nUtilisateur configuré : %s", 
+                    cible, port, protocole, (utilisateur != null && !utilisateur.isBlank()) ? utilisateur : "non renseigné");
+            
+            return TestConnexionResponse.builder()
+                    .success(true)
+                    .message("Connexion établie avec succès !")
+                    .details(details)
+                    .build();
+        } catch (IOException e) {
+            log.warn("Échec de la connexion vers {} sur le port {} : {}", cible, port, e.getMessage());
+            String details = String.format("Impossible d'établir une connexion TCP avec %s sur le port %d (%s).\nErreur : %s\n\nVeuillez vérifier le nom d'hôte/IP, le port et la configuration pare-feu.", 
+                    cible, port, protocole, e.getMessage());
+            return TestConnexionResponse.builder()
+                    .success(false)
+                    .message("Échec de la connexion")
+                    .details(details)
+                    .build();
+        }
     }
 
     public record DashboardStats(long total, long banques, long microFinances, long mesoFinances, long actives) {}

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, Search, Menu, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { Bell, Search, Menu, ShieldAlert, ShieldCheck, ChevronDown } from 'lucide-react';
 import { operationApi } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../hooks/useNotifications';
 import { useLocation, useNavigate } from 'react-router-dom';
+import UserProfileModal from '../common/UserProfileModal';
 
 const PAGE_TITLES = {
   '/dashboard': 'Tableau de bord',
@@ -32,6 +33,7 @@ export default function Header() {
   const navigate = useNavigate();
   const { notifications, unreadCount, markAllRead } = useNotifications();
   const [showNotif, setShowNotif] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
 
   const [securityData, setSecurityData] = useState(() => {
     try {
@@ -226,17 +228,30 @@ export default function Header() {
           )}
         </div>
 
-        {/* User avatar */}
-        <div className="flex items-center gap-2">
+        {/* User avatar — cliquer pour ouvrir la modale profil */}
+        <button
+          onClick={() => setShowProfile(true)}
+          className="flex items-center gap-2 hover:bg-slate-100 rounded-lg px-2 py-1.5 transition-colors group"
+          id="btn-open-user-profile"
+          title="Mon profil"
+        >
           <div className="w-8 h-8 rounded-full bg-[#F3C623]
-                          flex items-center justify-center text-[#0B192C] text-sm font-bold cursor-pointer shadow">
+                          flex items-center justify-center text-[#0B192C] text-sm font-bold shadow">
             {(user?.firstName?.[0] || user?.username?.[0] || 'U').toUpperCase()}
           </div>
-          <div className="hidden lg:block">
+          <div className="hidden lg:block text-left">
             <p className="text-slate-700 text-sm font-semibold leading-none">{user?.name || 'Utilisateur'}</p>
           </div>
-        </div>
+          <ChevronDown className="w-3.5 h-3.5 text-slate-400 hidden lg:block group-hover:text-slate-600 transition-colors" />
+        </button>
       </div>
+
+      {/* Modale profil utilisateur */}
+      <UserProfileModal
+        isOpen={showProfile}
+        onClose={() => setShowProfile(false)}
+        institutionId={user?.institutionId}
+      />
     </header>
   );
 }

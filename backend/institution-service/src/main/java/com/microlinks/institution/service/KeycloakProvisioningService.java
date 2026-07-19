@@ -2,6 +2,7 @@ package com.microlinks.institution.service;
 
 import com.microlinks.institution.dto.UserDto;
 import com.microlinks.institution.dto.UserCreateRequest;
+import com.microlinks.institution.dto.UserUpdateRequest;
 import com.microlinks.institution.entity.Institution;
 import com.microlinks.institution.entity.TypeInstitution;
 import com.microlinks.institution.exception.BusinessException;
@@ -437,6 +438,14 @@ public class KeycloakProvisioningService {
                     }
                 }
 
+                String gender = null;
+                if (attributes.containsKey("gender")) {
+                    List<String> genders = attributes.get("gender");
+                    if (genders != null && !genders.isEmpty()) {
+                        gender = genders.get(0);
+                    }
+                }
+
                 String role = getUserRole(adminToken, userId);
 
                 UserDto dto = new UserDto();
@@ -446,6 +455,7 @@ public class KeycloakProvisioningService {
                 dto.setFirstName(firstName);
                 dto.setLastName(lastName);
                 dto.setPhone(phone);
+                dto.setGender(gender);
                 dto.setRole(role);
                 dto.setEnabled(enabled != null && enabled);
                 dto.setInstitutionId(institutionId);
@@ -606,6 +616,108 @@ public class KeycloakProvisioningService {
         return dto;
     }
 
+    public void updateUserProfile(String userId, UserUpdateRequest request) {
+        String adminToken = getAdminToken();
+        if (adminToken == null) {
+            throw new RuntimeException("Impossible d'obtenir le jeton administrateur de Keycloak");
+        }
+
+        String userUrl = keycloakUrl + "/admin/realms/" + realm + "/users/" + userId;
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> user = restClient.get()
+                    .uri(userUrl)
+                    .header("Authorization", "Bearer " + adminToken)
+                    .retrieve()
+                    .body(Map.class);
+
+            if (user == null) {
+                throw new RuntimeException("Utilisateur non trouvé dans Keycloak : " + userId);
+            }
+
+            @SuppressWarnings("unchecked")
+            Map<String, Object> attributes = user.containsKey("attributes")
+                    ? new HashMap<>((Map<String, Object>) user.get("attributes"))
+                    : new HashMap<>();
+
+            if (request.getPhone() != null) {
+                attributes.put("telephone", List.of(request.getPhone()));
+            }
+            if (request.getGenre() != null) {
+                attributes.put("gender", List.of(request.getGenre()));
+            }
+
+            Map<String, Object> updateJson = new HashMap<>(user);
+            updateJson.put("firstName", request.getFirstName());
+            updateJson.put("lastName", request.getLastName());
+            updateJson.put("attributes", attributes);
+
+            // Éviter les clés problématiques que Keycloak rejette lors d'un PUT
+            updateJson.remove("credentials");
+            updateJson.remove("access");
+
+            restClient.put()
+                    .uri(userUrl)
+                    .header("Authorization", "Bearer " + adminToken)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(updateJson)
+                    .retrieve()
+                    .toBodilessEntity();
+            log.info("Profil de l'utilisateur Keycloak {} mis à jour avec succès", userId);
+        } catch (Exception e) {
+            log.error("Erreur de mise à jour du profil de l'utilisateur ID {}: {}", userId, e.getMessage(), e);
+            throw new RuntimeException("Erreur de mise à jour du profil Keycloak: " + e.getMessage());
+        }
+    }
+
+    public void updateUserPassword(String userId, String username, String currentPassword, String newPassword) {
+        // 1. Valider l'ancien mot de passe en tentant une authentification directe
+        String tokenUrl = keycloakUrl + "/realms/" + realm + "/protocol/openid-connect/token";
+        try {
+            MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+            form.add("grant_type", "password");
+            form.add("client_id", "admin-cli");
+            form.add("username", username);
+            form.add("password", currentPassword);
+
+            restClient.post()
+                    .uri(tokenUrl)
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .body(form)
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (Exception e) {
+            log.warn("Échec de validation de l'ancien mot de passe pour {}: {}", username, e.getMessage());
+            throw new BusinessException("Le mot de passe actuel est incorrect");
+        }
+
+        // 2. Mettre à jour avec le nouveau mot de passe
+        String adminToken = getAdminToken();
+        if (adminToken == null) {
+            throw new RuntimeException("Impossible d'obtenir le jeton administrateur de Keycloak");
+        }
+
+        String resetPasswordUrl = keycloakUrl + "/admin/realms/" + realm + "/users/" + userId + "/reset-password";
+        Map<String, Object> credential = new HashMap<>();
+        credential.put("type", "password");
+        credential.put("value", newPassword);
+        credential.put("temporary", false);
+
+        try {
+            restClient.put()
+                    .uri(resetPasswordUrl)
+                    .header("Authorization", "Bearer " + adminToken)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(credential)
+                    .retrieve()
+                    .toBodilessEntity();
+            log.info("Mot de passe mis à jour avec succès pour l'utilisateur ID {}", userId);
+        } catch (Exception e) {
+            log.error("Erreur de mise à jour du mot de passe Keycloak pour l'utilisateur ID {}: {}", userId, e.getMessage(), e);
+            throw new RuntimeException("Erreur lors de la mise à jour du mot de passe : " + e.getMessage());
+        }
+    }
+
     public void updateUserStatus(String userId, boolean enabled) {
         String adminToken = getAdminToken();
         if (adminToken == null) {
@@ -715,8 +827,11 @@ public class KeycloakProvisioningService {
 
             attributes.put("security_pin", List.of(hashPin(rawPin)));
 
-            Map<String, Object> updateJson = new HashMap<>();
+            Map<String, Object> updateJson = new HashMap<>(user);
             updateJson.put("attributes", attributes);
+            
+            updateJson.remove("credentials");
+            updateJson.remove("access");
 
             restClient.put()
                     .uri(userUrl)

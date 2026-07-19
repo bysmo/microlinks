@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="010-add-protocole-echange-entree-sortie" author="microlinks">
+        <comment>
+            Ajout des champs de configuration du protocole d'échange séparés par sens (ENTRÉE / SORTIE).
+            Chaque sens a son propre protocole, type de fichier, répertoire, utilisateur, port et mot de passe.
+        </comment>
+
+        <!-- ===== Sens ENTRÉE (réception depuis la plateforme) ===== -->
+        <addColumn tableName="institutions">
+            <column name="protocole_entree" type="VARCHAR(10)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+        <addColumn tableName="institutions">
+            <column name="type_fichier_entree" type="VARCHAR(10)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+        <addColumn tableName="institutions">
+            <column name="repertoire_entree" type="VARCHAR(500)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+        <addColumn tableName="institutions">
+            <column name="utilisateur_entree" type="VARCHAR(100)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+        <addColumn tableName="institutions">
+            <column name="port_entree" type="INTEGER">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+        <addColumn tableName="institutions">
+            <column name="mot_de_passe_entree" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <!-- ===== Sens SORTIE (émission vers la plateforme) ===== -->
+        <addColumn tableName="institutions">
+            <column name="protocole_sortie" type="VARCHAR(10)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+        <addColumn tableName="institutions">
+            <column name="type_fichier_sortie" type="VARCHAR(10)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+        <addColumn tableName="institutions">
+            <column name="repertoire_sortie" type="VARCHAR(500)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+        <addColumn tableName="institutions">
+            <column name="utilisateur_sortie" type="VARCHAR(100)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+        <addColumn tableName="institutions">
+            <column name="port_sortie" type="INTEGER">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+        <addColumn tableName="institutions">
+            <column name="mot_de_passe_sortie" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>
