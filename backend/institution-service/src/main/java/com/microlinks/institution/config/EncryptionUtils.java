@@ -24,7 +24,7 @@ public class EncryptionUtils {
     private static final int GCM_IV_LENGTH = 12;   // octets
 
     private static final String DEFAULT_KEY = "MicroLinksSftp#Key256bits!Secure";
-    private static byte[] encryptionKey;
+    private static byte[] encryptionKey = Arrays.copyOf(DEFAULT_KEY.getBytes(java.nio.charset.StandardCharsets.UTF_8), 32);
 
     /**
      * Constructeur pour injection de la clé depuis l'environnement Spring.

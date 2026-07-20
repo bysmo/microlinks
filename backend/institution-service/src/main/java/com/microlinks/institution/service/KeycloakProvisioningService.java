@@ -109,6 +109,55 @@ public class KeycloakProvisioningService {
     }
 
     /**
+     * S'assure que le client Keycloak "microlinks-frontend" a bien l'option
+     * directAccessGrantsEnabled = true, nécessaire pour valider le mot de passe
+     * actuel d'un utilisateur via le flux Resource Owner Password Credentials.
+     */
+    @SuppressWarnings("unchecked")
+    private void ensureDirectAccessGrants(String adminToken) {
+        try {
+            String clientsUrl = keycloakUrl + "/admin/realms/" + realm + "/clients?clientId=microlinks-frontend&max=1";
+            List<Map<String, Object>> clients = restClient.get()
+                    .uri(clientsUrl)
+                    .header("Authorization", "Bearer " + adminToken)
+                    .retrieve()
+                    .body(List.class);
+
+            if (clients == null || clients.isEmpty()) {
+                log.warn("Client 'microlinks-frontend' non trouvé pour la mise à jour de directAccessGrants");
+                return;
+            }
+
+            Map<String, Object> client = clients.get(0);
+            Boolean directAccessEnabled = (Boolean) client.get("directAccessGrantsEnabled");
+
+            if (Boolean.TRUE.equals(directAccessEnabled)) {
+                log.debug("directAccessGrantsEnabled déjà activé sur microlinks-frontend");
+                return;
+            }
+
+            // Activer directAccessGrantsEnabled
+            String clientId = (String) client.get("id");
+            String clientUrl = keycloakUrl + "/admin/realms/" + realm + "/clients/" + clientId;
+
+            Map<String, Object> update = new HashMap<>(client);
+            update.put("directAccessGrantsEnabled", true);
+
+            restClient.put()
+                    .uri(clientUrl)
+                    .header("Authorization", "Bearer " + adminToken)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(update)
+                    .retrieve()
+                    .toBodilessEntity();
+
+            log.info("directAccessGrantsEnabled activé sur le client microlinks-frontend");
+        } catch (Exception e) {
+            log.warn("Impossible d'activer directAccessGrantsEnabled sur microlinks-frontend: {}", e.getMessage());
+        }
+    }
+
+    /**
      * S'assure que les Protocol Mappers existent dans le realm pour exposer
      * les attributs utilisateur (institution_id, institution_nom) dans le token JWT.
      * Ces mappers sont créés au niveau du realm (default client scopes) pour s'appliquer
@@ -116,6 +165,10 @@ public class KeycloakProvisioningService {
      */
     @SuppressWarnings("unchecked")
     private void ensureProtocolMappers(String adminToken) {
+        // S'assurer que le client frontend a directAccessGrantsEnabled = true
+        // pour pouvoir valider le mot de passe actuel des utilisateurs.
+        ensureDirectAccessGrants(adminToken);
+
         try {
             // Récupérer la liste des clients pour trouver le client frontend
             String clientsUrl = keycloakUrl + "/admin/realms/" + realm + "/clients";
@@ -624,6 +677,7 @@ public class KeycloakProvisioningService {
 
         String userUrl = keycloakUrl + "/admin/realms/" + realm + "/users/" + userId;
         try {
+            // Récupérer l'utilisateur pour préserver les attributs existants
             @SuppressWarnings("unchecked")
             Map<String, Object> user = restClient.get()
                     .uri(userUrl)
@@ -635,26 +689,30 @@ public class KeycloakProvisioningService {
                 throw new RuntimeException("Utilisateur non trouvé dans Keycloak : " + userId);
             }
 
+            // Récupérer les attributs existants et les enrichir
             @SuppressWarnings("unchecked")
-            Map<String, Object> attributes = user.containsKey("attributes")
+            Map<String, Object> existingAttributes = user.containsKey("attributes")
                     ? new HashMap<>((Map<String, Object>) user.get("attributes"))
                     : new HashMap<>();
 
             if (request.getPhone() != null) {
-                attributes.put("telephone", List.of(request.getPhone()));
+                existingAttributes.put("telephone", List.of(request.getPhone()));
             }
             if (request.getGenre() != null) {
-                attributes.put("gender", List.of(request.getGenre()));
+                existingAttributes.put("gender", List.of(request.getGenre()));
             }
 
-            Map<String, Object> updateJson = new HashMap<>(user);
+            // Construire un payload MINIMAL pour éviter les champs Keycloak en lecture seule
+            // qui causent des erreurs 400 (federationLink, notBefore, disableableCredentialTypes, etc.)
+            Map<String, Object> updateJson = new HashMap<>();
+            updateJson.put("id", user.get("id"));
+            updateJson.put("username", user.get("username"));
+            updateJson.put("email", user.get("email"));
+            updateJson.put("enabled", user.getOrDefault("enabled", true));
+            updateJson.put("emailVerified", user.getOrDefault("emailVerified", true));
             updateJson.put("firstName", request.getFirstName());
             updateJson.put("lastName", request.getLastName());
-            updateJson.put("attributes", attributes);
-
-            // Éviter les clés problématiques que Keycloak rejette lors d'un PUT
-            updateJson.remove("credentials");
-            updateJson.remove("access");
+            updateJson.put("attributes", existingAttributes);
 
             restClient.put()
                     .uri(userUrl)
@@ -671,12 +729,22 @@ public class KeycloakProvisioningService {
     }
 
     public void updateUserPassword(String userId, String username, String currentPassword, String newPassword) {
-        // 1. Valider l'ancien mot de passe en tentant une authentification directe
+        // 1. Valider l'ancien mot de passe via le client public du realm (microlinks-frontend)
+        //    Ne pas utiliser admin-cli qui n'est configuré que pour le realm master.
         String tokenUrl = keycloakUrl + "/realms/" + realm + "/protocol/openid-connect/token";
+        boolean currentPasswordValid = false;
+
+        // S'assurer que directAccessGrantsEnabled est activé sur le client frontend
+        String adminTokenForCheck = getAdminToken();
+        if (adminTokenForCheck != null) {
+            ensureDirectAccessGrants(adminTokenForCheck);
+        }
+
+        // Essai 1 : client public microlinks-frontend
         try {
             MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
             form.add("grant_type", "password");
-            form.add("client_id", "admin-cli");
+            form.add("client_id", "microlinks-frontend");
             form.add("username", username);
             form.add("password", currentPassword);
 
@@ -686,12 +754,38 @@ public class KeycloakProvisioningService {
                     .body(form)
                     .retrieve()
                     .toBodilessEntity();
-        } catch (Exception e) {
-            log.warn("Échec de validation de l'ancien mot de passe pour {}: {}", username, e.getMessage());
+            currentPasswordValid = true;
+            log.debug("Validation du mot de passe actuel réussie pour {} via microlinks-frontend", username);
+        } catch (Exception e1) {
+            log.warn("Tentative microlinks-frontend échouée pour {}: {}", username, e1.getMessage());
+
+            // Essai 2 : client microlinks-backend
+            try {
+                MultiValueMap<String, String> form2 = new LinkedMultiValueMap<>();
+                form2.add("grant_type", "password");
+                form2.add("client_id", "microlinks-backend");
+                form2.add("username", username);
+                form2.add("password", currentPassword);
+
+                restClient.post()
+                        .uri(tokenUrl)
+                        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                        .body(form2)
+                        .retrieve()
+                        .toBodilessEntity();
+                currentPasswordValid = true;
+                log.debug("Validation du mot de passe actuel réussie pour {} via microlinks-backend", username);
+            } catch (Exception e2) {
+                log.warn("Toutes les tentatives de validation du mot de passe actuel ont échoué pour {}: {}", username, e2.getMessage());
+                throw new BusinessException("Le mot de passe actuel est incorrect");
+            }
+        }
+
+        if (!currentPasswordValid) {
             throw new BusinessException("Le mot de passe actuel est incorrect");
         }
 
-        // 2. Mettre à jour avec le nouveau mot de passe
+        // 2. Mettre à jour avec le nouveau mot de passe via l'Admin API
         String adminToken = getAdminToken();
         if (adminToken == null) {
             throw new RuntimeException("Impossible d'obtenir le jeton administrateur de Keycloak");
@@ -820,18 +914,24 @@ public class KeycloakProvisioningService {
                 throw new RuntimeException("Utilisateur non trouvé dans Keycloak : " + userId);
             }
 
+            // Récupérer les attributs existants pour les préserver
             @SuppressWarnings("unchecked")
-            Map<String, Object> attributes = user.containsKey("attributes") 
-                ? new HashMap<>((Map<String, Object>) user.get("attributes")) 
+            Map<String, Object> existingAttributes = user.containsKey("attributes")
+                ? new HashMap<>((Map<String, Object>) user.get("attributes"))
                 : new HashMap<>();
 
-            attributes.put("security_pin", List.of(hashPin(rawPin)));
+            existingAttributes.put("security_pin", List.of(hashPin(rawPin)));
 
-            Map<String, Object> updateJson = new HashMap<>(user);
-            updateJson.put("attributes", attributes);
-            
-            updateJson.remove("credentials");
-            updateJson.remove("access");
+            // Construire un payload MINIMAL pour éviter les champs Keycloak en lecture seule
+            Map<String, Object> updateJson = new HashMap<>();
+            updateJson.put("id", user.get("id"));
+            updateJson.put("username", user.get("username"));
+            updateJson.put("email", user.get("email"));
+            updateJson.put("enabled", user.getOrDefault("enabled", true));
+            updateJson.put("emailVerified", user.getOrDefault("emailVerified", true));
+            updateJson.put("firstName", user.get("firstName"));
+            updateJson.put("lastName", user.get("lastName"));
+            updateJson.put("attributes", existingAttributes);
 
             restClient.put()
                     .uri(userUrl)
@@ -887,6 +987,72 @@ public class KeycloakProvisioningService {
             log.info("Événement de création d'utilisateur publié sur RabbitMQ pour : {}", request.getUsername());
         } catch (Exception e) {
             log.error("Impossible de publier l'événement de création d'utilisateur sur RabbitMQ: {}", e.getMessage(), e);
+        }
+    }
+
+    public UserDto getUserProfile(String userId, UUID institutionId) {
+        String adminToken = getAdminToken();
+        if (adminToken == null) {
+            throw new RuntimeException("Impossible d'obtenir le jeton administrateur de Keycloak");
+        }
+
+        String userUrl = keycloakUrl + "/admin/realms/" + realm + "/users/" + userId;
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> u = restClient.get()
+                    .uri(userUrl)
+                    .header("Authorization", "Bearer " + adminToken)
+                    .retrieve()
+                    .body(Map.class);
+
+            if (u == null) {
+                throw new RuntimeException("Utilisateur non trouvé dans Keycloak : " + userId);
+            }
+
+            @SuppressWarnings("unchecked")
+            Map<String, List<String>> attributes = u.containsKey("attributes")
+                    ? (Map<String, List<String>>) u.get("attributes")
+                    : new HashMap<>();
+
+            String username = (String) u.get("username");
+            String email = (String) u.get("email");
+            String firstName = (String) u.get("firstName");
+            String lastName = (String) u.get("lastName");
+            Boolean enabled = (Boolean) u.get("enabled");
+
+            String phone = null;
+            if (attributes.containsKey("telephone")) {
+                List<String> phones = attributes.get("telephone");
+                if (phones != null && !phones.isEmpty()) {
+                    phone = phones.get(0);
+                }
+            }
+
+            String gender = null;
+            if (attributes.containsKey("gender")) {
+                List<String> genders = attributes.get("gender");
+                if (genders != null && !genders.isEmpty()) {
+                    gender = genders.get(0);
+                }
+            }
+
+            String role = getUserRole(adminToken, userId);
+
+            UserDto dto = new UserDto();
+            dto.setId(userId);
+            dto.setUsername(username);
+            dto.setEmail(email);
+            dto.setFirstName(firstName);
+            dto.setLastName(lastName);
+            dto.setPhone(phone);
+            dto.setGender(gender);
+            dto.setRole(role);
+            dto.setEnabled(enabled != null && enabled);
+            dto.setInstitutionId(institutionId);
+            return dto;
+        } catch (Exception e) {
+            log.error("Erreur lors de la récupération du profil de l'utilisateur {}: {}", userId, e.getMessage(), e);
+            throw new RuntimeException("Erreur de récupération du profil Keycloak : " + e.getMessage());
         }
     }
 

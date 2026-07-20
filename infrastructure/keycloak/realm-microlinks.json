@@ -22,7 +22,7 @@
       "publicClient": true,
       "standardFlowEnabled": true,
       "implicitFlowEnabled": false,
-      "directAccessGrantsEnabled": false,
+      "directAccessGrantsEnabled": true,
       "rootUrl": "http://localhost:3000",
       "baseUrl": "/",
       "redirectUris": [

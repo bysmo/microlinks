@@ -33,14 +33,32 @@ export default function UserProfileModal({ isOpen, onClose, institutionId }) {
   const [showPwd, setShowPwd] = useState(false);
   const [savingPwd, setSavingPwd] = useState(false);
 
+  const [loading, setLoading] = useState(false);
+
   useEffect(() => {
-    if (isOpen && user) {
-      setFirstName(user.firstName || '');
-      setLastName(user.lastName || '');
-      setPhone(user.phone || '');
-      setGenre(user.gender || 'M');
-    }
-  }, [isOpen, user]);
+    const fetchProfile = async () => {
+      const id = institutionId || user?.institutionId;
+      if (!id || !isOpen) return;
+      setLoading(true);
+      try {
+        const res = await userApi.getMyProfile(id);
+        const data = res.data;
+        setFirstName(data.firstName || '');
+        setLastName(data.lastName || '');
+        setPhone(data.phone || '');
+        setGenre(data.gender || 'M');
+      } catch (err) {
+        console.error("Erreur lors de la récupération du profil :", err);
+        setFirstName(user?.firstName || '');
+        setLastName(user?.lastName || '');
+        setPhone(user?.phone || '');
+        setGenre(user?.gender || 'M');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, [isOpen, user, institutionId]);
 
   const resetForm = () => {
     setNewPin(''); setConfirmPin('');
@@ -237,7 +255,8 @@ export default function UserProfileModal({ isOpen, onClose, institutionId }) {
                     type="text"
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-cyan-500 transition-all font-sans"
+                    disabled={loading || savingProfile}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-sans"
                   />
                 </div>
                 <div className="space-y-1">
@@ -247,7 +266,8 @@ export default function UserProfileModal({ isOpen, onClose, institutionId }) {
                     type="text"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-cyan-500 transition-all font-sans"
+                    disabled={loading || savingProfile}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-sans"
                   />
                 </div>
               </div>
@@ -261,7 +281,8 @@ export default function UserProfileModal({ isOpen, onClose, institutionId }) {
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="Ex: +226 70 00 00 00"
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-cyan-500 transition-all font-sans"
+                    disabled={loading || savingProfile}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-sans"
                   />
                 </div>
                 <div className="space-y-1">
@@ -270,7 +291,8 @@ export default function UserProfileModal({ isOpen, onClose, institutionId }) {
                     id="profile-gender"
                     value={genre}
                     onChange={(e) => setGenre(e.target.value)}
-                    className="w-full bg-[#0f1c2e] border border-white/10 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-cyan-500 transition-all font-sans"
+                    disabled={loading || savingProfile}
+                    className="w-full bg-[#0f1c2e] border border-white/10 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-sans"
                     style={{ colorScheme: 'dark' }}
                   >
                     <option value="M" className="bg-[#0f1c2e] text-white">Homme</option>
@@ -282,11 +304,11 @@ export default function UserProfileModal({ isOpen, onClose, institutionId }) {
               <div className="flex justify-end pt-1">
                 <button
                   type="submit"
-                  disabled={savingProfile || !firstName.trim() || !lastName.trim()}
+                  disabled={loading || savingProfile || !firstName.trim() || !lastName.trim()}
                   className="flex items-center gap-2 px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-semibold transition-all shadow-lg shadow-cyan-900/20 font-sans"
                   id="btn-save-profile"
                 >
-                  {savingProfile ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                  {(loading || savingProfile) ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                   Enregistrer les modifications
                 </button>
               </div>

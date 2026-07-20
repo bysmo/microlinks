@@ -73,6 +73,7 @@ export const userApi = {
   updateStatus: (institutionId, userId, enabled) => api.patch(`/api/v1/institutions/${institutionId}/users/${userId}/status`, null, { params: { enabled } }),
   updateMyPin: (institutionId, pin) => api.put(`/api/v1/institutions/${institutionId}/users/me/pin`, null, { params: { pin } }),
   updateMyPassword: (institutionId, data) => api.put(`/api/v1/institutions/${institutionId}/users/me/password`, data),
+  getMyProfile: (institutionId) => api.get(`/api/v1/institutions/${institutionId}/users/me/profile`),
   updateMyProfile: (institutionId, data) => api.put(`/api/v1/institutions/${institutionId}/users/me/profile`, data),
 };
 

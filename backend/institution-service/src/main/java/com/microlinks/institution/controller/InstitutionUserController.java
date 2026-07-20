@@ -95,6 +95,17 @@ public class InstitutionUserController {
 
 
 
+    @GetMapping("/me/profile")
+    @Operation(summary = "Obtenir ses propres informations de profil")
+    public ResponseEntity<UserDto> getMyProfile(
+            @PathVariable UUID institutionId,
+            @AuthenticationPrincipal Jwt jwt) {
+        
+        validateAccess(institutionId, jwt);
+        String userId = jwt.getSubject();
+        return ResponseEntity.ok(keycloakProvisioningService.getUserProfile(userId, institutionId));
+    }
+
     @PutMapping("/me/profile")
     @Operation(summary = "Mettre à jour ses propres informations de profil")
     public ResponseEntity<Void> updateMyProfile(

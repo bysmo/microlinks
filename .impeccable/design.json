@@ -1,0 +1,129 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-20T06:13:06Z",
+  "title": "Design System: MicroLinks",
+  "extensions": {
+    "colorMeta": {
+      "chrome-navy": { "role": "secondary", "displayName": "Marine Chrome", "canonical": "#0B192C", "tonalRamp": ["#050e1a", "#0a192f", "#0B192C", "#1a2f4c", "#2b5380", "#3b6b9e", "#6f95bd", "#a3bfdc"] },
+      "signal-yellow": { "role": "primary", "displayName": "Jaune Signal", "canonical": "#F3C623", "tonalRamp": ["#6d5500", "#8b6c00", "#a98300", "#c79b00", "#e5b300", "#F3C623", "#fde047", "#fef9c3"] },
+      "signal-yellow-deep": { "role": "primary-hover", "displayName": "Jaune Signal Profond", "canonical": "#e0b512", "tonalRamp": ["#5a4400", "#8b6c00", "#c79b00", "#e0b512"] },
+      "success": { "role": "tertiary", "displayName": "Vert Succès", "canonical": "#16a34a", "tonalRamp": ["#14532d", "#15803d", "#16a34a", "#22c55e", "#dcfce7", "#f0fdf4"] },
+      "danger": { "role": "tertiary", "displayName": "Rouge Danger", "canonical": "#dc2626", "tonalRamp": ["#7f1d1d", "#b91c1c", "#dc2626", "#ef4444", "#fee2e2", "#fef2f2"] },
+      "info": { "role": "tertiary", "displayName": "Bleu Info", "canonical": "#1d4ed8", "tonalRamp": ["#1e3a8a", "#1e40af", "#1d4ed8", "#3b82f6", "#dbeafe", "#eff6ff"] },
+      "surface": { "role": "neutral", "displayName": "Surface", "canonical": "#ffffff", "tonalRamp": ["#f8fafc", "#ffffff"] },
+      "canvas": { "role": "neutral", "displayName": "Canevas", "canonical": "#f8fafc", "tonalRamp": ["#e2e8f0", "#f1f5f9", "#f8fafc", "#ffffff"] },
+      "ink": { "role": "neutral", "displayName": "Encre", "canonical": "#0f172a", "tonalRamp": ["#020617", "#0f172a", "#1e293b", "#334155"] },
+      "ink-muted": { "role": "neutral", "displayName": "Encre Atténuée", "canonical": "#334155", "tonalRamp": ["#1e293b", "#334155", "#475569", "#64748b"] },
+      "border-neutral": { "role": "neutral", "displayName": "Bordure Neutre", "canonical": "#e2e8f0", "tonalRamp": ["#cbd5e1", "#e2e8f0", "#f1f5f9"] }
+    },
+    "typographyMeta": {
+      "title": { "displayName": "Titre", "purpose": "Titres de page dans l'entête, titres de modale." },
+      "body": { "displayName": "Corps", "purpose": "Texte courant, cellules de tableau, corps de modale." },
+      "label": { "displayName": "Libellé", "purpose": "Entêtes de colonnes de tableau, libellés de formulaire, tracking large." },
+      "mono": { "displayName": "Mono technique", "purpose": "Compte à rebours de sécurité, identifiants techniques courts." }
+    },
+    "shadows": [
+      { "name": "card-hover", "value": "0 10px 15px -3px rgba(0,0,0,0.05), 0 4px 6px -4px rgba(0,0,0,0.05)", "purpose": "Survol d'une carte cliquable uniquement." },
+      { "name": "overlay-dropdown", "value": "0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)", "purpose": "Menu déroulant de notifications flottant au-dessus du contenu." },
+      { "name": "overlay-modal", "value": "0 25px 50px -12px rgba(0,0,0,0.25)", "purpose": "Modales de saisie/validation, avec fond assombri et flouté derrière." },
+      { "name": "button-hover", "value": "0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1)", "purpose": "Retour tactile au survol des boutons primaires/secondaires." }
+    ],
+    "motion": [
+      { "name": "ease-standard", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Transitions d'apparition/disparition (toasts, dropdowns)." },
+      { "name": "duration-fast", "value": "150ms", "purpose": "Transitions d'état (hover, focus, badges)." },
+      { "name": "duration-standard", "value": "200-300ms", "purpose": "Ouverture de modale, repli de sidebar, slide-up." }
+    ],
+    "breakpoints": [
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Bouton Primaire",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Action primaire d'un écran ou d'une modale (valider, enregistrer, confirmer).",
+      "html": "<button class=\"ds-btn-primary\">Valider l'opération</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; gap: 8px; background: #F3C623; color: #0B192C; font-weight: 600; font-size: 14px; padding: 8px 16px; border-radius: 8px; border: 1px solid #F3C623; cursor: pointer; transition: background 0.2s, box-shadow 0.2s; } .ds-btn-primary:hover { background: #e0b512; border-color: #e0b512; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1); } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(11,25,44,0.35); } .ds-btn-primary:active { transform: scale(0.97); }"
+    },
+    {
+      "name": "Bouton Secondaire",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Action de second plan dans le cadre marine (ex. annuler dans une entête sombre).",
+      "html": "<button class=\"ds-btn-secondary\">Annuler</button>",
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; gap: 8px; background: #0B192C; color: #ffffff; font-weight: 600; font-size: 14px; padding: 8px 16px; border-radius: 8px; border: 1px solid #0B192C; cursor: pointer; transition: background 0.2s; } .ds-btn-secondary:hover { background: #1a2f4c; border-color: #1a2f4c; }"
+    },
+    {
+      "name": "Badge de Statut",
+      "kind": "chip",
+      "refersTo": "badge",
+      "description": "Pastille de statut d'opération, d'institution ou de facture — vocabulaire fixe par famille de couleur.",
+      "html": "<span class=\"ds-badge ds-badge-success\">Comptabilisé ✓</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 9999px; font-size: 12px; font-weight: 600; border: 1px solid transparent; } .ds-badge-success { background: #f0fdf4; color: #15803d; border-color: #dcfce7; } .ds-badge-danger { background: #fef2f2; color: #b91c1c; border-color: #fee2e2; } .ds-badge-neutral { background: #f8fafc; color: #64748b; border-color: #e2e8f0; }"
+    },
+    {
+      "name": "Champ de Saisie",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Champ de formulaire standard (montant, référence, recherche).",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Référence de l'opération\" />",
+      "css": ".ds-input { width: 100%; background: #ffffff; color: #0f172a; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 16px; font-size: 14px; transition: border-color 0.2s, box-shadow 0.2s; } .ds-input::placeholder { color: #64748b; } .ds-input:hover { border-color: #94a3b8; } .ds-input:focus { outline: none; border-color: #0B192C; box-shadow: 0 0 0 2px rgba(11,25,44,0.15); }"
+    },
+    {
+      "name": "Carte Statistique",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Carte de synthèse chiffrée sur le tableau de bord (nombre d'opérations, montant total, etc.).",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-icon\">⇄</div><div><p class=\"ds-card-label\">Opérations du jour</p><p class=\"ds-card-value\">128</p></div></div>",
+      "css": ".ds-card { display: flex; align-items: center; gap: 16px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; } .ds-card-icon { width: 48px; height: 48px; border-radius: 16px; display: flex; align-items: center; justify-content: center; background: #fef9c3; color: #0B192C; flex-shrink: 0; } .ds-card-label { font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 4px; } .ds-card-value { font-size: 22px; font-weight: 700; color: #0f172a; margin: 0; }"
+    },
+    {
+      "name": "Item de Navigation (actif)",
+      "kind": "nav",
+      "refersTo": "sidebar-item-active",
+      "description": "Lien de navigation actif dans la barre latérale marine.",
+      "html": "<a class=\"ds-nav-item ds-nav-item-active\" href=\"#\"><span class=\"ds-nav-dot\"></span>Tableau de bord</a>",
+      "css": ".ds-nav-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 8px; margin: 0 8px; color: #cbd5e1; font-size: 14px; font-weight: 500; text-decoration: none; transition: background 0.2s, color 0.2s; } .ds-nav-item:hover { color: #ffffff; background: rgba(243,198,35,0.1); } .ds-nav-item-active { background: #F3C623; color: #0B192C; font-weight: 700; border: 1px solid #F3C623; } .ds-nav-dot { width: 6px; height: 6px; border-radius: 9999px; background: #0B192C; margin-left: auto; }"
+    },
+    {
+      "name": "Entête de Tableau",
+      "kind": "custom",
+      "refersTo": "data-table",
+      "description": "Entête de tableau de données — chrome marine avec libellés jaune signal.",
+      "html": "<table class=\"ds-table\"><thead><tr><th>Référence</th><th>Montant</th><th>Statut</th></tr></thead></table>",
+      "css": ".ds-table { width: 100%; font-size: 14px; border-collapse: collapse; } .ds-table thead { background: #0B192C; } .ds-table th { padding: 12px 16px; text-align: left; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #F3C623; cursor: pointer; } .ds-table th:hover { color: #ffffff; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Le Poste de Contrôle",
+    "overview": "MicroLinks se pense comme le poste de contrôle d'une salle des opérations financières : un cadre marine et jaune, autoritaire et stable, qui encadre un canevas de travail clair et sans bruit. La barre latérale, les entêtes de tableau et le pied de page de tableau restent dans ce chrome sombre — c'est là que vit l'identité de la plateforme. Le canevas de contenu (cartes, formulaires, tableaux) reste volontairement clair et plat : c'est l'espace où l'agent lit des montants, valide des opérations et ne doit jamais être distrait par la décoration.\n\nCe système rejette explicitement l'esthétique « SaaS coloré » : pas de dégradés décoratifs, pas de glassmorphism généralisé, pas de cartes empilées identiques. La confiance se lit dans la rigueur — hiérarchie stricte, statuts toujours visibles, aucun raccourci esthétique qui masquerait une donnée financière.",
+    "keyCharacteristics": [
+      "Chrome marine + jaune réservé à la navigation et aux actions primaires ; jamais au canevas de contenu.",
+      "Canevas clair et plat par défaut (slate-50 / blanc), sans glassmorphism.",
+      "Boutons et champs fermes, sans ambiguïté : angles nets, états toujours distincts.",
+      "Vocabulaire de statut riche et cohérent (badges pastille) pour porter la traçabilité à l'œil.",
+      "Élévation réservée aux éléments qui flottent au-dessus du flux (dropdown, modale, toast)."
+    ],
+    "rules": [
+      { "name": "La Règle Chrome vs Canevas", "body": "Le marine et le jaune n'habillent que le cadre (sidebar, entêtes/pied de tableau, boutons primaires/secondaires) et les statuts. Le canevas de contenu — cartes, corps de tableau, modales — reste sur la palette neutre claire. Ne jamais étendre le marine ou le jaune en fond de carte ou de page.", "section": "colors" },
+      { "name": "La Règle Une Seule Voix", "body": "Une seule famille sans-serif (Inter) pour toute l'interface. Le mono est une exception ponctuelle réservée aux données chronométrées ou techniques, jamais une deuxième voix généralisée.", "section": "typography" },
+      { "name": "La Règle Plat-par-Défaut", "body": "Une surface est plate au repos. L'ombre n'apparaît qu'en réponse à un état (survol d'une carte cliquable) ou à une superposition réelle (dropdown, modale, toast) — jamais en décoration statique.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do réserver le Marine Chrome et le Jaune Signal au cadre (sidebar, entêtes/pied de tableau, boutons primaires/secondaires) et aux statuts — jamais en fond de carte ou de page.",
+      "Do garder les cartes et tableaux plats au repos (bordure 1px, pas d'ombre) ; n'introduire une ombre que pour un élément réellement flottant (dropdown, modale, toast).",
+      "Do utiliser le vocabulaire de badges fixe (pastille + teinte pastel) pour chaque famille de statut, de manière identique sur tous les écrans.",
+      "Do garder les boutons et champs fermes et sans ambiguïté : angles nets à 8px, états hover/focus/disabled toujours visuellement distincts.",
+      "Do limiter le mono (JetBrains Mono) aux valeurs chronométrées ou techniques ponctuelles."
+    ],
+    "donts": [
+      "Don't réactiver .glass-card ou le glassmorphism comme signature visuelle générale — il a été neutralisé volontairement dans le canevas clair.",
+      "Don't utiliser de dégradés décoratifs (background-clip: text, boutons en dégradé) ou de bordures colorées en border-left/border-right comme accent.",
+      "Don't empiler des grilles de cartes identiques (icône + titre + texte) répétées sans raison fonctionnelle.",
+      "Don't étendre le Marine ou le Jaune au fond du canevas de contenu — ils identifient le cadre, pas les données.",
+      "Don't introduire une deuxième famille de police pour l'esthétique ; Inter porte toute la hiérarchie, le mono reste l'exception technique."
+    ]
+  }
+}

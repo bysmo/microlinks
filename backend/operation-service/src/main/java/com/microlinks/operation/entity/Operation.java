@@ -17,16 +17,17 @@ import java.util.UUID;
 
 /**
  * Représente un enregistrement de transaction financière (Opération).
- * Sécurisé par chiffrement au niveau des champs (FLE) et chaînage par blockchain.
+ * Sécurisé par chiffrement au niveau des champs (FLE) et chaînage par
+ * blockchain.
  */
 @Entity
 @Table(name = "operations", indexes = {
-    @Index(name = "idx_op_reference", columnList = "reference_unique"),
-    @Index(name = "idx_op_statut", columnList = "statut"),
-    @Index(name = "idx_op_institution_emettrice", columnList = "institution_emettrice_id"),
-    @Index(name = "idx_op_institution_beneficiaire", columnList = "institution_beneficiaire_id"),
-    @Index(name = "idx_op_date_operation", columnList = "date_operation"),
-    @Index(name = "idx_op_tenant", columnList = "tenant_id")
+        @Index(name = "idx_op_reference", columnList = "reference_unique"),
+        @Index(name = "idx_op_statut", columnList = "statut"),
+        @Index(name = "idx_op_institution_emettrice", columnList = "institution_emettrice_id"),
+        @Index(name = "idx_op_institution_beneficiaire", columnList = "institution_beneficiaire_id"),
+        @Index(name = "idx_op_date_operation", columnList = "date_operation"),
+        @Index(name = "idx_op_tenant", columnList = "tenant_id")
 })
 @FilterDef(name = "tenantFilter", parameters = @ParamDef(name = "tenantId", type = String.class))
 @Filter(name = "tenantFilter", condition = "tenant_id = cast(:tenantId as uuid) OR institution_emettrice_id = cast(:tenantId as uuid) OR institution_beneficiaire_id = cast(:tenantId as uuid) OR banque_correspondante_emettrice_id = cast(:tenantId as uuid) OR banque_correspondante_receptrice_id = cast(:tenantId as uuid)")
@@ -167,19 +168,19 @@ public class Operation {
      */
     public String calculateChecksum() {
         String payload = String.format("%s|%s|%s|%s|%s",
-            compteDonneurOrdre != null ? compteDonneurOrdre : "",
-            compteBeneficiaire != null ? compteBeneficiaire : "",
-            dateOperation != null ? dateOperation.toString() : "",
-            montant != null ? montant.toPlainString() : "0.00",
-            statut != null ? statut.name() : ""
-        );
+                compteDonneurOrdre != null ? compteDonneurOrdre : "",
+                compteBeneficiaire != null ? compteBeneficiaire : "",
+                dateOperation != null ? dateOperation.toString() : "",
+                montant != null ? montant.toPlainString() : "0.00",
+                statut != null ? statut.name() : "");
         try {
             java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
             byte[] hashBytes = digest.digest(payload.getBytes(java.nio.charset.StandardCharsets.UTF_8));
             StringBuilder hexString = new StringBuilder();
             for (byte b : hashBytes) {
                 String hex = Integer.toHexString(0xff & b);
-                if (hex.length() == 1) hexString.append('0');
+                if (hex.length() == 1)
+                    hexString.append('0');
                 hexString.append(hex);
             }
             return hexString.toString();
@@ -189,7 +190,8 @@ public class Operation {
     }
 
     /**
-     * Calcule le hash cryptographique de la blockchain reliant cette opération à la précédente.
+     * Calcule le hash cryptographique de la blockchain reliant cette opération à la
+     * précédente.
      * Combinaison : id + tenant_id + amount + timestamp + previous_hash.
      *
      * @param previousHashVal Le hash de la transaction précédente.
@@ -197,19 +199,19 @@ public class Operation {
      */
     public String calculateHash(String previousHashVal) {
         String payload = String.format("%s|%s|%s|%s|%s",
-            id != null ? id.toString() : "",
-            tenantId != null ? tenantId.toString() : "",
-            montant != null ? montant.toPlainString() : "0.00",
-            createdAt != null ? createdAt.toString() : "",
-            previousHashVal != null ? previousHashVal : ""
-        );
+                id != null ? id.toString() : "",
+                tenantId != null ? tenantId.toString() : "",
+                montant != null ? montant.toPlainString() : "0.00",
+                createdAt != null ? createdAt.toString() : "",
+                previousHashVal != null ? previousHashVal : "");
         try {
             java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
             byte[] hashBytes = digest.digest(payload.getBytes(java.nio.charset.StandardCharsets.UTF_8));
             StringBuilder hexString = new StringBuilder();
             for (byte b : hashBytes) {
                 String hex = Integer.toHexString(0xff & b);
-                if (hex.length() == 1) hexString.append('0');
+                if (hex.length() == 1)
+                    hexString.append('0');
                 hexString.append(hex);
             }
             return hexString.toString();

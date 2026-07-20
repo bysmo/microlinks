@@ -39,8 +39,9 @@ public class MontantEncryptionConverter implements AttributeConverter<BigDecimal
             try {
                 return new BigDecimal(dbData);
             } catch (NumberFormatException nfe) {
-                log.error("Échec du déchiffrement ou du parsing décimal pour: " + dbData, e);
-                throw new RuntimeException("Erreur de déchiffrement du montant", e);
+                log.error("Échec critique du déchiffrement ou du parsing décimal pour: " + dbData, nfe);
+                // Retourner BigDecimal.ZERO pour éviter de faire planter l'affichage complet de la liste des opérations
+                return BigDecimal.ZERO;
             }
         }
     }
