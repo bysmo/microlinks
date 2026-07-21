@@ -227,6 +227,32 @@
             "LECTEUR"
           ]
         }
+      },
+      {
+        "name": "AGENT_ALM",
+        "description": "Agent habilité à traiter les alertes ALM/CFT sur les opérations"
+      },
+      {
+        "name": "MESO_ALM",
+        "description": "Meso-finance ALM Agent",
+        "composite": true,
+        "composites": {
+          "realm": [
+            "AGENT_ALM",
+            "LECTEUR"
+          ]
+        }
+      },
+      {
+        "name": "BANK_ALM",
+        "description": "Bank ALM Agent",
+        "composite": true,
+        "composites": {
+          "realm": [
+            "AGENT_ALM",
+            "LECTEUR"
+          ]
+        }
       }
     ]
   },
@@ -426,6 +452,64 @@
       ],
       "realmRoles": [
         "BANK_VALID"
+      ]
+    },
+    {
+      "username": "bank.alm",
+      "email": "bank.alm@microlinks.com",
+      "firstName": "Alm",
+      "lastName": "Bank",
+      "enabled": true,
+      "emailVerified": true,
+      "attributes": {
+        "institution_id": [
+          "b3d829b3-3f66-57bb-94b4-e8fcd5023de4"
+        ],
+        "institution_nom": [
+          "Banque Atlantique Ouest"
+        ],
+        "security_pin": [
+          "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "BankAlm@2024",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "BANK_ALM"
+      ]
+    },
+    {
+      "username": "meso.alm",
+      "email": "meso.alm@microlinks.com",
+      "firstName": "Alm",
+      "lastName": "Meso",
+      "enabled": true,
+      "emailVerified": true,
+      "attributes": {
+        "institution_id": [
+          "a2c918a2-2e55-46aa-83a3-d7efc4912cd3"
+        ],
+        "institution_nom": [
+          "MesoFinance de l'Ouest"
+        ],
+        "security_pin": [
+          "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "MesoAlm@2024",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "MESO_ALM"
       ]
     }
   ],

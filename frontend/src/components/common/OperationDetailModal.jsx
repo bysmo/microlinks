@@ -557,10 +557,11 @@ export default function OperationDetailModal({ isOpen, onClose, operationId, onS
                             Connecté en tant que <span className="text-white font-semibold">{user?.name || user?.username}</span>
                           </span>
                           <div className="flex flex-wrap gap-1 mt-1">
-                            {(rawRoles || []).filter(r => ['BANK_AGENT','MESO_AGENT','BANK_VALID','MESO_VALID','BANK_ADMIN','MESO_ADMIN'].includes(r)).map(r => (
+                            {(rawRoles || []).filter(r => ['BANK_AGENT','MESO_AGENT','BANK_VALID','MESO_VALID','BANK_ADMIN','MESO_ADMIN','BANK_ALM','MESO_ALM'].includes(r)).map(r => (
                               <span key={r} className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${
                                 r.includes('AGENT') ? 'bg-blue-500/20 text-blue-400'
                                 : r.includes('VALID') ? 'bg-emerald-500/20 text-emerald-400'
+                                : r.includes('ALM') ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
                                 : 'bg-purple-500/20 text-purple-400'
                               }`}>{r}</span>
                             ))}

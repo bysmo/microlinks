@@ -132,7 +132,7 @@ function CompteModal({ isOpen, onClose, onSave, compte, banques }) {
 }
 
 // ─── Composant modal pour ajouter un collaborateur ──────────────────────────
-function UserModal({ isOpen, onClose, onSave }) {
+function UserModal({ isOpen, onClose, onSave, typeInstitution }) {
   const [form, setForm] = useState({ username: '', email: '', firstName: '', lastName: '', phone: '', role: 'AGENT' });
   const [saving, setSaving] = useState(false);
 
@@ -260,6 +260,11 @@ function UserModal({ isOpen, onClose, onSave }) {
               >
                 <option value="AGENT">Agent de Saisie</option>
                 <option value="VALID">Agent de Validation</option>
+                {typeInstitution === 'BANQUE' ? (
+                  <option value="BANK_ALM">Agent ALM (BANK_ALM)</option>
+                ) : (
+                  <option value="MESO_ALM">Agent ALM (MESO_ALM)</option>
+                )}
               </select>
             </div>
           </div>
@@ -1054,12 +1059,16 @@ export default function MonEtablissementPage() {
                             ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
                             : u.role === 'VALID'
                             ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
+                            : u.role === 'BANK_ALM' || u.role === 'MESO_ALM'
+                            ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
                             : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
                         }`}>
                           {u.role === 'ADMIN'
                             ? 'Administrateur'
                             : u.role === 'VALID'
                             ? 'Validateur'
+                            : u.role === 'BANK_ALM' || u.role === 'MESO_ALM'
+                            ? `Agent ALM (${u.role})`
                             : 'Agent'}
                         </span>
                       </td>
@@ -1345,6 +1354,7 @@ export default function MonEtablissementPage() {
         isOpen={userModalOpen}
         onClose={() => setUserModalOpen(false)}
         onSave={handleCreateUser}
+        typeInstitution={inst?.typeInstitution}
       />
 
       {/* Modal compte de règlement */}

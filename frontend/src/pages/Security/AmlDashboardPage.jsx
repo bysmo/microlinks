@@ -8,8 +8,11 @@ import {
 import { operationApi } from '../../services/api';
 import toast from 'react-hot-toast';
 import PinValidationModal from '../../components/common/PinValidationModal';
+import { useAuth } from '../../context/AuthContext';
 
 export default function AmlDashboardPage() {
+  const { roles, rawRoles } = useAuth();
+  const hasAccess = roles?.includes('AGENT_ALM') || rawRoles?.includes('BANK_ALM') || rawRoles?.includes('MESO_ALM') || roles?.includes('ADMIN_PLATEFORME');
   const [activeTab, setActiveTab] = useState('alerts'); // alerts, sanctions, sources
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -221,6 +224,18 @@ export default function AmlDashboardPage() {
     const matchesCountry = filterCountry === 'ALL' || s.pays === filterCountry;
     return matchesSearch && matchesType && matchesSource && matchesCountry;
   });
+
+  if (!hasAccess) {
+    return (
+      <div className="glass-card p-8 text-center space-y-4 max-w-md mx-auto mt-12 border-red-500/20">
+        <AlertOctagon className="w-12 h-12 text-red-500 mx-auto animate-pulse" />
+        <h2 className="text-xl font-bold text-white">Accès non autorisé</h2>
+        <p className="text-dark-300 text-sm">
+          Seuls les profils de conformité ALM (*_ALM) sont autorisés à accéder à ce module et à traiter les alertes.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-slide-up" id="aml-dashboard-page">

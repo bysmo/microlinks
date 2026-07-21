@@ -235,6 +235,7 @@ export default function UserProfileModal({ isOpen, onClose, institutionId }) {
                     user?.roles?.includes('ADMIN_PLATEFORME') ? '🔑 Admin Plateforme'
                     : user?.roles?.includes('ADMIN_INSTITUTION') ? '🏛 Admin Institution'
                     : user?.roles?.includes('VALID') ? '✅ Validateur'
+                    : user?.roles?.includes('AGENT_ALM') ? '🛡️ Agent ALM / Conformité'
                     : '📝 Agent'
                   }</p>
                 </div>

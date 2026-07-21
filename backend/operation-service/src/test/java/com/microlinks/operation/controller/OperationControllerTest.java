@@ -128,4 +128,48 @@ public class OperationControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.referenceUnique").value("ML-VIR-20260616-000001"));
     }
+
+    @Test
+    public void testDecideAml_WithAmlRole_Success() throws Exception {
+        when(pinValidationClient.validatePin(any(), any())).thenReturn(true);
+        when(operationService.decideAml(any(), any(), any(), any(), any(), any())).thenReturn(operationDto);
+
+        mockMvc.perform(post("/api/v1/operations/" + operationId + "/decision")
+                        .with(jwt()
+                                .authorities(new SimpleGrantedAuthority("ROLE_AGENT_ALM"))
+                                .jwt(j -> j
+                                        .claim("institution_id", UUID.randomUUID().toString())
+                                        .claim("name", "John ALM")
+                                )
+                        )
+                        .header("X-Validation-PIN", "1234")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"decision\":\"APPROUVER\",\"commentaire\":\"Ok pour conformité\"}"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    public void testDecideAml_WithoutAmlRole_Returns403() throws Exception {
+        mockMvc.perform(post("/api/v1/operations/" + operationId + "/decision")
+                        .with(jwt()
+                                .authorities(new SimpleGrantedAuthority("ROLE_AGENT_SAISIE"))
+                                .jwt(j -> j
+                                        .claim("institution_id", UUID.randomUUID().toString())
+                                        .claim("name", "John Agent")
+                                )
+                        )
+                        .header("X-Validation-PIN", "1234")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"decision\":\"APPROUVER\",\"commentaire\":\"Ok pour conformité\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    public void testGetSuspended_WithoutAmlRole_Returns403() throws Exception {
+        mockMvc.perform(get("/api/v1/operations/aml/suspended")
+                        .with(jwt()
+                                .authorities(new SimpleGrantedAuthority("ROLE_AGENT_SAISIE"))
+                        ))
+                .andExpect(status().isForbidden());
+    }
 }

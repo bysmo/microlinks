@@ -84,7 +84,7 @@ const menuItems = [
     label: 'AML / Conformité',
     icon: ShieldAlert,
     path: '/aml',
-    roles: ['ADMIN_PLATEFORME', 'ADMIN_INSTITUTION', 'AGENT_VALIDATION'],
+    roles: ['AGENT_ALM'],
   },
 ];
 

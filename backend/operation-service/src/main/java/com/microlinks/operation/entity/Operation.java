@@ -123,11 +123,11 @@ public class Operation {
     @Column(name = "adresse_do_code_postal", length = 20)
     private String adresseDonCodePostal;
 
-    @JdbcTypeCode(java.sql.Types.CHAR)
     @Column(name = "adresse_do_pays", length = 2)
     private String adresseDonPays;
 
-    // =================== DONNEUR D'ORDRE EFFECTIF (Ultimate Debtor) ===================
+    // =================== DONNEUR D'ORDRE EFFECTIF (Ultimate Debtor)
+    // ===================
 
     @Convert(converter = SensitiveStringConverter.class)
     @Column(name = "nom_donneur_ordre_effectif", length = 255)
@@ -147,7 +147,6 @@ public class Operation {
     @Column(name = "adresse_doe_code_postal", length = 20)
     private String adressDoeCodePostal;
 
-    @JdbcTypeCode(java.sql.Types.CHAR)
     @Column(name = "adresse_doe_pays", length = 2)
     private String adresseDsePays;
 
@@ -193,11 +192,11 @@ public class Operation {
     @Column(name = "adresse_ben_code_postal", length = 20)
     private String adresseBenCodePostal;
 
-    @JdbcTypeCode(java.sql.Types.CHAR)
     @Column(name = "adresse_ben_pays", length = 2)
     private String adresseBenPays;
 
-    // =================== BÉNÉFICIAIRE EFFECTIF (Ultimate Creditor) ===================
+    // =================== BÉNÉFICIAIRE EFFECTIF (Ultimate Creditor)
+    // ===================
 
     @Convert(converter = SensitiveStringConverter.class)
     @Column(name = "nom_beneficiaire_effectif", length = 255)
@@ -217,7 +216,6 @@ public class Operation {
     @Column(name = "adresse_bene_code_postal", length = 20)
     private String adressBeneCodePostal;
 
-    @JdbcTypeCode(java.sql.Types.CHAR)
     @Column(name = "adresse_bene_pays", length = 2)
     private String adressBenePays;
 

@@ -96,7 +96,17 @@ public class KeycloakProvisioningService {
                     null
             );
 
-            List<UserProfile> profiles = List.of(adminProfile, agentProfile, validProfile);
+            UserProfile almProfile = new UserProfile(
+                    cleanPrefix + ".alm",
+                    cleanPrefix + ".alm@microlinks.com",
+                    "Agent",
+                    "ALM",
+                    prefixCap + "Alm@2026",
+                    isBank ? "BANK_ALM" : "MESO_ALM",
+                    null
+            );
+
+            List<UserProfile> profiles = List.of(adminProfile, agentProfile, validProfile, almProfile);
 
             for (UserProfile profile : profiles) {
                 createAndAssignRole(adminToken, institution, profile);
@@ -540,6 +550,10 @@ public class KeycloakProvisioningService {
                         return "AGENT";
                     } else if ("BANK_VALID".equals(roleName) || "MESO_VALID".equals(roleName)) {
                         return "VALID";
+                    } else if ("BANK_ALM".equals(roleName)) {
+                        return "BANK_ALM";
+                    } else if ("MESO_ALM".equals(roleName)) {
+                        return "MESO_ALM";
                     }
                 }
             }
@@ -589,8 +603,10 @@ public class KeycloakProvisioningService {
             roleName = isBank ? "BANK_AGENT" : "MESO_AGENT";
         } else if ("VALID".equalsIgnoreCase(request.getRole())) {
             roleName = isBank ? "BANK_VALID" : "MESO_VALID";
+        } else if ("BANK_ALM".equalsIgnoreCase(request.getRole()) || "MESO_ALM".equalsIgnoreCase(request.getRole()) || "ALM".equalsIgnoreCase(request.getRole())) {
+            roleName = isBank ? "BANK_ALM" : "MESO_ALM";
         } else {
-            throw new BusinessException("Le rôle doit être AGENT ou VALID.");
+            throw new BusinessException("Le rôle doit être AGENT, VALID, BANK_ALM ou MESO_ALM.");
         }
 
         String tempPassword = generateTemporaryPassword();

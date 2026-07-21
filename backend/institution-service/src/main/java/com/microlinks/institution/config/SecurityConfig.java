@@ -73,6 +73,7 @@ public class SecurityConfig {
             case "BANK_ADMIN", "MESO_ADMIN"     -> "ADMIN_INSTITUTION";
             case "BANK_AGENT", "MESO_AGENT"     -> "AGENT_SAISIE";
             case "BANK_VALID", "MESO_VALID"     -> "AGENT_VALIDATION";
+            case "BANK_ALM", "MESO_ALM"         -> "AGENT_ALM";
             default -> null;
         };
     }

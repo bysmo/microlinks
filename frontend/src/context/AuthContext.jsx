@@ -16,6 +16,8 @@ function normalizeRoles(keycloakRoles) {
     'MESO_AGENT':  'AGENT_SAISIE',
     'BANK_VALID':  'AGENT_VALIDATION',
     'MESO_VALID':  'AGENT_VALIDATION',
+    'BANK_ALM':    'AGENT_ALM',
+    'MESO_ALM':    'AGENT_ALM',
   };
   const normalized = new Set(keycloakRoles);
   keycloakRoles.forEach(role => {

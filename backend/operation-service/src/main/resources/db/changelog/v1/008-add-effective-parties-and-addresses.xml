@@ -11,6 +11,8 @@
         conformément au standard ISO 20022 PostalAddress (Adr2).
     -->
     <changeSet id="op-008-effective-parties" author="microlinks">
+        <validCheckSum>9:353ad7874e36b6c23e58bd3420a4c47d</validCheckSum>
+        <validCheckSum>9:0ffd98a5d0b5746a2a998657199da058</validCheckSum>
 
         <!-- =================== DONNEUR D'ORDRE EFFECTIF (Ultimate Debtor) =================== -->
         <!-- Nom complet du donneur d'ordre effectif (bénéficiaire réel du débit) -->
@@ -32,7 +34,7 @@
             <column name="adresse_do_code_postal" type="VARCHAR(20)" remarks="Code postal - Donneur d'Ordre (ISO 20022 PstCd)"/>
         </addColumn>
         <addColumn tableName="operations">
-            <column name="adresse_do_pays" type="CHAR(2)" remarks="Code pays ISO 3166-1 alpha-2 - Donneur d'Ordre (ISO 20022 Ctry)"/>
+            <column name="adresse_do_pays" type="VARCHAR(2)" remarks="Code pays ISO 3166-1 alpha-2 - Donneur d'Ordre (ISO 20022 Ctry)"/>
         </addColumn>
 
         <!-- Adresse ISO 20022 du Donneur d'Ordre Effectif -->
@@ -49,7 +51,7 @@
             <column name="adresse_doe_code_postal" type="VARCHAR(20)" remarks="Code postal - DO Effectif (ISO 20022 PstCd)"/>
         </addColumn>
         <addColumn tableName="operations">
-            <column name="adresse_doe_pays" type="CHAR(2)" remarks="Code pays ISO 3166-1 alpha-2 - DO Effectif (ISO 20022 Ctry)"/>
+            <column name="adresse_doe_pays" type="VARCHAR(2)" remarks="Code pays ISO 3166-1 alpha-2 - DO Effectif (ISO 20022 Ctry)"/>
         </addColumn>
 
         <!-- =================== BÉNÉFICIAIRE EFFECTIF (Ultimate Creditor) =================== -->
@@ -72,7 +74,7 @@
             <column name="adresse_ben_code_postal" type="VARCHAR(20)" remarks="Code postal - Bénéficiaire (ISO 20022 PstCd)"/>
         </addColumn>
         <addColumn tableName="operations">
-            <column name="adresse_ben_pays" type="CHAR(2)" remarks="Code pays ISO 3166-1 alpha-2 - Bénéficiaire (ISO 20022 Ctry)"/>
+            <column name="adresse_ben_pays" type="VARCHAR(2)" remarks="Code pays ISO 3166-1 alpha-2 - Bénéficiaire (ISO 20022 Ctry)"/>
         </addColumn>
 
         <!-- Adresse ISO 20022 du Bénéficiaire Effectif -->
@@ -89,7 +91,7 @@
             <column name="adresse_bene_code_postal" type="VARCHAR(20)" remarks="Code postal - BEN Effectif (ISO 20022 PstCd)"/>
         </addColumn>
         <addColumn tableName="operations">
-            <column name="adresse_bene_pays" type="CHAR(2)" remarks="Code pays ISO 3166-1 alpha-2 - BEN Effectif (ISO 20022 Ctry)"/>
+            <column name="adresse_bene_pays" type="VARCHAR(2)" remarks="Code pays ISO 3166-1 alpha-2 - BEN Effectif (ISO 20022 Ctry)"/>
         </addColumn>
 
     </changeSet>

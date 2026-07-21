@@ -238,6 +238,7 @@ public class OperationController {
 
     @GetMapping("/aml/suspended")
     @Operation(summary = "Lister les opérations suspendues pour motif AML/CFT")
+    @PreAuthorize("hasRole('AGENT_ALM')")
     public ResponseEntity<PagedResponse<OperationDto>> getSuspended(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -262,7 +263,7 @@ public class OperationController {
 
     @PostMapping("/aml/{id}/decision")
     @Operation(summary = "Prendre une décision de conformité sur une opération suspendue")
-    @PreAuthorize("hasAnyRole('AGENT_VALIDATION', 'ADMIN_INSTITUTION', 'ADMIN_PLATEFORME')")
+    @PreAuthorize("hasRole('AGENT_ALM')")
     public ResponseEntity<OperationDto> decideAml(
             @PathVariable UUID id,
             @RequestBody Map<String, String> body,

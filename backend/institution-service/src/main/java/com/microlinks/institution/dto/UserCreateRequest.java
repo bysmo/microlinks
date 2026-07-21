@@ -28,7 +28,7 @@ public class UserCreateRequest {
     private String phone;
 
     @NotBlank(message = "Le rôle (profil) est obligatoire")
-    @Pattern(regexp = "^(?i)(AGENT|VALID)$", message = "Le rôle doit être soit AGENT soit VALID")
+    @Pattern(regexp = "^(?i)(AGENT|VALID|BANK_ALM|MESO_ALM|ALM)$", message = "Le rôle doit être AGENT, VALID, BANK_ALM ou MESO_ALM")
     private String role;
 
     @NotNull(message = "L'ID de l'institution est obligatoire")
