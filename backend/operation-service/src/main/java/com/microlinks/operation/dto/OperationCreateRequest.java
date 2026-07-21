@@ -2,6 +2,7 @@ package com.microlinks.operation.dto;
 
 import com.microlinks.operation.entity.TypeOperation;
 import jakarta.validation.constraints.*;
+import jakarta.validation.Valid;
 import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -28,7 +29,7 @@ public class OperationCreateRequest {
     @Size(max = 500, message = "Le motif ne peut pas dépasser 500 caractères")
     private String motif;
 
-    // Emetteur
+    // =================== ÉMETTEUR ===================
     @NotNull private UUID institutionEmettriceId;
     @NotBlank private String nomInstitutionEmettrice;
     @NotBlank private String compteDonneurOrdre;
@@ -37,7 +38,17 @@ public class OperationCreateRequest {
     private String nomBanqueCorrespondanteEmettrice;
     private String compteCorrespondanceEmetteur;
 
-    // Beneficiaire
+    // Adresse ISO 20022 du Donneur d'Ordre (StrtNm / TwnNm / PstCd / Ctry)
+    @Valid
+    private PostalAddressDto adresseDonneurOrdre;
+
+    // Donneur d'Ordre Effectif (Ultimate Debtor — ISO 20022 UltmtDbtr)
+    private String nomDonneurOrdreEffectif;
+
+    @Valid
+    private PostalAddressDto adresseDonneurOrdreEffectif;
+
+    // =================== BÉNÉFICIAIRE ===================
     @NotNull private UUID institutionBeneficiaireId;
     @NotBlank private String nomInstitutionBeneficiaire;
     @NotBlank private String compteBeneficiaire;
@@ -46,6 +57,16 @@ public class OperationCreateRequest {
     private String nomBanqueCorrespondanteReceptrice;
     private String compteCorrespondanceRecepteur;
 
-    // Cheque (optionnel)
+    // Adresse ISO 20022 du Bénéficiaire
+    @Valid
+    private PostalAddressDto adresseBeneficiaire;
+
+    // Bénéficiaire Effectif (Ultimate Creditor — ISO 20022 UltmtCdtr)
+    private String nomBeneficiaireEffectif;
+
+    @Valid
+    private PostalAddressDto adresseBeneficiaireEffectif;
+
+    // =================== CHÈQUE (optionnel) ===================
     private String numeroCheque;
 }

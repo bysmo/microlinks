@@ -34,6 +34,25 @@ public class InstitutionSftpInfoDto {
     private String sftpRepertoireReception;
     private String sftpRepertoireArchivage;
 
+    // Protocole d'échange actif
+    private Boolean protocoleActif;
+
+    // Sens ENTRÉE (réception depuis la plateforme)
+    private String protocoleEntree;
+    private String typeFichierEntree;
+    private String repertoireEntree;
+    private String utilisateurEntree;
+    private Integer portEntree;
+    private String motDePasseEntree;
+
+    // Sens SORTIE (émission vers la plateforme)
+    private String protocoleSortie;
+    private String typeFichierSortie;
+    private String repertoireSortie;
+    private String utilisateurSortie;
+    private Integer portSortie;
+    private String motDePasseSortie;
+
     // Types de fichiers acceptés
     private List<String> typesFichiersEnvoi;
     private List<String> typesFichiersReception;

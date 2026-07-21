@@ -8,13 +8,14 @@ import Modal from '../../components/common/Modal';
 import StatusBadge from '../../components/common/StatusBadge';
 import DataTable from '../../components/common/DataTable';
 import {
-  tarifApi, billingSettingsApi, institutionBillingApi, institutionApi,
+  tarifApi, billingSettingsApi, institutionBillingApi, institutionApi, sftpApi,
 } from '../../services/api';
 
 const TABS = [
   { id: 'parametres', label: 'Paramètres Facturation', icon: Settings },
   { id: 'tarifs', label: 'Tarifs Plateforme', icon: Tag },
   { id: 'abonnements', label: 'Abonnements Institutions', icon: Building2 },
+  { id: 'sftp', label: 'Monitoring SFTP', icon: RefreshCw },
 ];
 
 const fmtMontant = (v, devise) =>
@@ -59,6 +60,7 @@ export default function AdministrationPage() {
       {activeTab === 'parametres' && <ParametresTab />}
       {activeTab === 'tarifs' && <TarifsTab />}
       {activeTab === 'abonnements' && <AbonnementsTab />}
+      {activeTab === 'sftp' && <SftpMonitoringTab />}
     </div>
   );
 }
@@ -729,5 +731,280 @@ function ConfigModal({ config, institutions, tarifs, onClose, onDone }) {
         </label>
       </form>
     </Modal>
+  );
+}
+
+/* ===================== MONITORING SFTP ===================== */
+function SftpMonitoringTab() {
+  const [connections, setConnections] = useState([]);
+  const [transfers, setTransfers] = useState([]);
+  const [stats, setStats] = useState({ total: 0, succes: 0, echec: 0, collectes: 0, deposes: 0, erreurs: 0 });
+  const [loading, setLoading] = useState(true);
+  const [testing, setTesting] = useState({}); // { 'INST-ENTREE': true/false }
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalTransfers, setTotalTransfers] = useState(0);
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [connRes, statsRes, transRes] = await Promise.all([
+        sftpApi.getConnections(),
+        sftpApi.getTransfersStats(),
+        sftpApi.getTransfers({ page, size: pageSize })
+      ]);
+      setConnections(connRes.data || []);
+      setStats(statsRes.data || { total: 0, succes: 0, echec: 0, collectes: 0, deposes: 0, erreurs: 0 });
+      setTransfers(transRes.data?.content || []);
+      setTotalTransfers(transRes.data?.totalElements || 0);
+    } catch (e) {
+      toast.error('Erreur lors du chargement des données SFTP');
+    } finally {
+      setLoading(false);
+    }
+  }, [page, pageSize]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const handleTestConnection = async (code, sens) => {
+    const key = `${code}-${sens}`;
+    setTesting(prev => ({ ...prev, [key]: true }));
+    try {
+      const res = await sftpApi.testConnection(code, sens);
+      if (res.data?.success) {
+        toast.success(`Connexion SFTP ${sens} réussie pour ${code} !`);
+      } else {
+        toast.error(`Échec connexion SFTP ${sens} pour ${code} : ${res.data?.message || 'Inconnu'}`);
+      }
+      // Refresh connections status
+      const connRes = await sftpApi.getConnections();
+      setConnections(connRes.data || []);
+    } catch (e) {
+      toast.error(`Erreur lors du test de connexion pour ${code}`);
+    } finally {
+      setTesting(prev => ({ ...prev, [key]: false }));
+    }
+  };
+
+  const columns = useMemo(() => [
+    {
+      accessorKey: 'timestamp',
+      header: 'Date & Heure',
+      cell: info => <span className="text-dark-300 text-xs font-mono">{new Date(info.getValue()).toLocaleString('fr-FR')}</span>,
+    },
+    {
+      accessorKey: 'typeEvenement',
+      header: 'Type d\'évènement',
+      cell: info => {
+        const val = info.getValue();
+        const colors = val === 'COLLECTE' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-purple-500/10 text-purple-400 border-purple-500/20';
+        return <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${colors}`}>{val}</span>;
+      }
+    },
+    {
+      accessorKey: 'nomFichier',
+      header: 'Fichier',
+      cell: info => <span className="font-mono text-xs text-white max-w-xs truncate block" title={info.getValue()}>{info.getValue()}</span>,
+    },
+    {
+      accessorKey: 'typeFichier',
+      header: 'Format',
+      cell: info => <span className="px-1.5 py-0.5 rounded bg-dark-900 border border-dark-700 text-xs font-mono text-dark-300">{info.getValue()}</span>,
+    },
+    {
+      accessorKey: 'tailleBytes',
+      header: 'Taille',
+      cell: info => {
+        const bytes = info.getValue();
+        if (bytes == null) return '—';
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+      }
+    },
+    {
+      accessorKey: 'statut',
+      header: 'Statut',
+      cell: info => {
+        const val = info.getValue();
+        return val === 'SUCCES' ? (
+          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-500/10 text-green-400 border border-green-500/20">Succès</span>
+        ) : (
+          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-red-500/10 text-red-400 border border-red-500/20">Échec</span>
+        );
+      }
+    },
+    {
+      accessorKey: 'messageErreur',
+      header: 'Détails / Erreurs',
+      cell: info => {
+        const val = info.getValue();
+        const dest = info.row.original.cheminDestination;
+        if (val) return <span className="text-red-400 text-xs truncate max-w-xs block font-mono" title={val}>{val}</span>;
+        if (dest) return <span className="text-dark-400 text-xs truncate max-w-xs block font-mono" title={dest}>{dest}</span>;
+        return <span className="text-dark-500 text-xs">—</span>;
+      }
+    }
+  ], []);
+
+  return (
+    <div className="space-y-6">
+      {/* Dashboard Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="glass-card p-4 flex flex-col justify-between">
+          <span className="text-xs font-semibold text-dark-400 uppercase tracking-wider">Total des transferts</span>
+          <span className="text-2xl font-bold text-white mt-2">{stats.total}</span>
+        </div>
+        <div className="glass-card p-4 flex flex-col justify-between">
+          <span className="text-xs font-semibold text-blue-400 uppercase tracking-wider">Fichiers Collectés</span>
+          <span className="text-2xl font-bold text-blue-400 mt-2">{stats.collectes}</span>
+        </div>
+        <div className="glass-card p-4 flex flex-col justify-between">
+          <span className="text-xs font-semibold text-purple-400 uppercase tracking-wider">Fichiers Déposés</span>
+          <span className="text-2xl font-bold text-purple-400 mt-2">{stats.deposes}</span>
+        </div>
+        <div className="glass-card p-4 flex flex-col justify-between">
+          <span className="text-xs font-semibold text-red-400 uppercase tracking-wider">Échecs / Erreurs</span>
+          <span className="text-2xl font-bold text-red-400 mt-2">{stats.erreurs}</span>
+        </div>
+      </div>
+
+      {/* Services status banner */}
+      <div className="glass-card p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 border-l-4 border-l-green-500">
+        <div>
+          <h4 className="text-sm font-bold text-white flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" /> Service SFTP MicroLinks Actif
+          </h4>
+          <p className="text-xs text-dark-400 mt-1">
+            Les crons de collecte et de distribution automatique s'exécutent en tâche de fond.
+          </p>
+        </div>
+        <div className="flex gap-4 text-xs font-mono text-dark-300">
+          <div>Collecte : <span className="text-white">Toutes les 5 minutes</span></div>
+          <div>Distribution : <span className="text-white">Toutes les 5 minutes</span></div>
+        </div>
+      </div>
+
+      {/* Connection Diagnositcs */}
+      <div className="glass-card p-6 space-y-4">
+        <div>
+          <h3 className="text-base font-bold text-white">Diagnostics de Connexions SFTP</h3>
+          <p className="text-xs text-dark-400 mt-0.5">Vérifiez l'état de communication des répertoires SFTP pour chaque institution.</p>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-dark-800 text-xs font-bold text-dark-400 uppercase">
+                <th className="py-3 px-4">Établissement</th>
+                <th className="py-3 px-4">Sens ENTRÉE (Dépôt plateforme)</th>
+                <th className="py-3 px-4">Sens SORTIE (Collecte plateforme)</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-dark-800 text-sm">
+              {connections.map((conn) => (
+                <tr key={conn.institutionId} className="hover:bg-dark-900/30 transition-colors">
+                  <td className="py-3 px-4">
+                    <div className="font-semibold text-white">{conn.institutionNom}</div>
+                    <div className="text-xs text-dark-500 font-mono mt-0.5">{conn.institutionCode}</div>
+                  </td>
+                  <td className="py-3 px-4 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <ConnectionStatusBadge status={conn.statusEntree} />
+                      {conn.statusEntree !== 'INACTIF' && (
+                        <button
+                          onClick={() => handleTestConnection(conn.institutionCode, 'ENTREE')}
+                          disabled={testing[`${conn.institutionCode}-ENTREE`]}
+                          className="px-2 py-1 text-xs rounded border border-dark-700 bg-dark-900 text-dark-300 hover:text-white hover:border-dark-500 flex items-center gap-1 disabled:opacity-50 transition-colors"
+                        >
+                          {testing[`${conn.institutionCode}-ENTREE`] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                          Tester
+                        </button>
+                      )}
+                    </div>
+                    {conn.erreurEntree && (
+                      <div className="text-xs text-red-400 bg-red-950/20 border border-red-900/30 p-2 rounded max-w-md font-mono whitespace-pre-wrap animate-fadeIn" title={conn.erreurEntree}>
+                        {conn.erreurEntree}
+                      </div>
+                    )}
+                  </td>
+                  <td className="py-3 px-4 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <ConnectionStatusBadge status={conn.statusSortie} />
+                      {conn.statusSortie !== 'INACTIF' && (
+                        <button
+                          onClick={() => handleTestConnection(conn.institutionCode, 'SORTIE')}
+                          disabled={testing[`${conn.institutionCode}-SORTIE`]}
+                          className="px-2 py-1 text-xs rounded border border-dark-700 bg-dark-900 text-dark-300 hover:text-white hover:border-dark-500 flex items-center gap-1 disabled:opacity-50 transition-colors"
+                        >
+                          {testing[`${conn.institutionCode}-SORTIE`] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                          Tester
+                        </button>
+                      )}
+                    </div>
+                    {conn.erreurSortie && (
+                      <div className="text-xs text-red-400 bg-red-950/20 border border-red-900/30 p-2 rounded max-w-md font-mono whitespace-pre-wrap animate-fadeIn" title={conn.erreurSortie}>
+                        {conn.erreurSortie}
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {connections.length === 0 && (
+                <tr>
+                  <td colSpan={3} className="py-8 text-center text-dark-500 text-sm">
+                    Aucune institution SFTP active configurée.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Recent Transfers Log */}
+      <div className="space-y-4">
+        <div>
+          <h3 className="text-base font-bold text-white">Historique Récent des Échanges SFTP</h3>
+          <p className="text-xs text-dark-400 mt-0.5">Suivi en temps réel des dépôts et collectes de fichiers effectués.</p>
+        </div>
+
+        <DataTable
+          data={transfers}
+          columns={columns}
+          totalElements={totalTransfers}
+          page={page}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          isLoading={loading}
+          emptyMessage="Aucun transfert de fichier SFTP dans l'historique."
+        />
+      </div>
+    </div>
+  );
+}
+
+function ConnectionStatusBadge({ status }) {
+  let styles = 'bg-dark-900 text-dark-500 border-dark-800';
+  let label = 'Non configuré';
+
+  if (status === 'ACTIVE') {
+    styles = 'bg-green-500/10 text-green-400 border-green-500/20';
+    label = 'Connecté (OK)';
+  } else if (status === 'ERREUR') {
+    styles = 'bg-red-500/10 text-red-400 border-red-500/20';
+    label = 'Erreur Connexion';
+  } else if (status === 'INACTIF') {
+    styles = 'bg-yellow-500/10 text-yellow-500/80 border-yellow-500/20';
+    label = 'Protocole Inactif';
+  }
+
+  return (
+    <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${styles}`}>
+      {label}
+    </span>
   );
 }

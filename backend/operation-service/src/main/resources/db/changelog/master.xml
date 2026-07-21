@@ -11,5 +11,6 @@
     <include file="db/changelog/v1/005-create-aml-tables.xml"/>
     <include file="db/changelog/v1/006-add-aml-country-and-sources.xml"/>
     <include file="db/changelog/v1/007-add-blockchain-and-tenant-columns.xml"/>
+    <include file="db/changelog/v1/008-add-effective-parties-and-addresses.xml"/>
 
 </databaseChangeLog>

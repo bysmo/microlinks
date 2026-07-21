@@ -90,6 +90,22 @@ public class InstitutionInternalController {
         dto.setSftpRepertoireEnvoi(i.getSftpRepertoireEnvoi());
         dto.setSftpRepertoireReception(i.getSftpRepertoireReception());
         dto.setSftpRepertoireArchivage(i.getSftpRepertoireArchivage());
+        dto.setProtocoleActif(i.getProtocoleActif());
+        
+        dto.setProtocoleEntree(i.getProtocoleEntree());
+        dto.setTypeFichierEntree(i.getTypeFichierEntree());
+        dto.setRepertoireEntree(i.getRepertoireEntree());
+        dto.setUtilisateurEntree(i.getUtilisateurEntree());
+        dto.setPortEntree(i.getPortEntree());
+        dto.setMotDePasseEntree(i.getMotDePasseEntree());
+
+        dto.setProtocoleSortie(i.getProtocoleSortie());
+        dto.setTypeFichierSortie(i.getTypeFichierSortie());
+        dto.setRepertoireSortie(i.getRepertoireSortie());
+        dto.setUtilisateurSortie(i.getUtilisateurSortie());
+        dto.setPortSortie(i.getPortSortie());
+        dto.setMotDePasseSortie(i.getMotDePasseSortie());
+
         dto.setTypesFichiersEnvoi(i.getTypesFichiersEnvoi());
         dto.setTypesFichiersReception(i.getTypesFichiersReception());
         dto.setSftpNotificationActive(i.getSftpNotificationActive());

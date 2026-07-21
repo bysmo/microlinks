@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="011-create-sftp-file-transfers" author="antigravity">
+        <createTable tableName="sftp_file_transfers" remarks="Tableau de journalisation des transferts de fichiers SFTP">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_sftp_file_transfers"/>
+            </column>
+            <column name="nom_fichier" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="type_fichier" type="varchar(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="taille_bytes" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="type_evenement" type="varchar(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="statut" type="varchar(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="institution_source_id" type="uuid"/>
+            <column name="institution_source_code" type="varchar(50)"/>
+            <column name="institution_dest_id" type="uuid"/>
+            <column name="institution_dest_code" type="varchar(50)"/>
+            <column name="message_erreur" type="text"/>
+            <column name="chemin_destination" type="varchar(500)"/>
+            <column name="timestamp" type="timestamp" defaultValueDate="now()"/>
+        </createTable>
+
+        <createIndex tableName="sftp_file_transfers" indexName="idx_sftp_transfer_statut">
+            <column name="statut"/>
+        </createIndex>
+        <createIndex tableName="sftp_file_transfers" indexName="idx_sftp_transfer_inst_source">
+            <column name="institution_source_id"/>
+        </createIndex>
+        <createIndex tableName="sftp_file_transfers" indexName="idx_sftp_transfer_inst_dest">
+            <column name="institution_dest_id"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

@@ -23,7 +23,7 @@ public class OperationDto {
     private String devise;
     private String motif;
 
-    // Emetteur
+    // =================== ÉMETTEUR ===================
     private UUID institutionEmettriceId;
     private String nomInstitutionEmettrice;
     private String compteDonneurOrdre;
@@ -32,7 +32,14 @@ public class OperationDto {
     private String nomBanqueCorrespondanteEmettrice;
     private String compteCorrespondanceEmetteur;
 
-    // Beneficiaire
+    // Adresse ISO 20022 du Donneur d'Ordre
+    private PostalAddressDto adresseDonneurOrdre;
+
+    // Donneur d'Ordre Effectif (Ultimate Debtor — ISO 20022 UltmtDbtr)
+    private String nomDonneurOrdreEffectif;
+    private PostalAddressDto adresseDonneurOrdreEffectif;
+
+    // =================== BÉNÉFICIAIRE ===================
     private UUID institutionBeneficiaireId;
     private String nomInstitutionBeneficiaire;
     private String compteBeneficiaire;
@@ -41,10 +48,17 @@ public class OperationDto {
     private String nomBanqueCorrespondanteReceptrice;
     private String compteCorrespondanceRecepteur;
 
-    // Cheque
+    // Adresse ISO 20022 du Bénéficiaire
+    private PostalAddressDto adresseBeneficiaire;
+
+    // Bénéficiaire Effectif (Ultimate Creditor — ISO 20022 UltmtCdtr)
+    private String nomBeneficiaireEffectif;
+    private PostalAddressDto adresseBeneficiaireEffectif;
+
+    // =================== CHÈQUE ===================
     private String numeroCheque;
 
-    // Tracabilite
+    // =================== TRAÇABILITÉ ===================
     private String commentaireRejet;
     private String creePar;
     private LocalDateTime createdAt;

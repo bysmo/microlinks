@@ -5,8 +5,6 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.annotations.Filter;
-import org.hibernate.annotations.FilterDef;
-import org.hibernate.annotations.ParamDef;
 import com.microlinks.operation.config.SensitiveStringConverter;
 
 import java.time.LocalDateTime;
@@ -22,7 +20,6 @@ import java.util.UUID;
     @Index(name = "idx_client_institution", columnList = "institution_id"),
     @Index(name = "idx_client_tenant", columnList = "tenant_id")
 })
-@FilterDef(name = "tenantFilter", parameters = @ParamDef(name = "tenantId", type = String.class))
 @Filter(name = "tenantFilter", condition = "tenant_id = cast(:tenantId as uuid)")
 @Data
 @Builder

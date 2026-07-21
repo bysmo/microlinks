@@ -7,6 +7,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.annotations.Filter;
 import org.hibernate.annotations.FilterDef;
 import org.hibernate.annotations.ParamDef;
+import org.hibernate.annotations.JdbcTypeCode;
 import com.microlinks.operation.config.SensitiveStringConverter;
 
 import java.math.BigDecimal;
@@ -106,6 +107,50 @@ public class Operation {
     @Column(name = "compte_correspondance_emetteur", length = 255)
     private String compteCorrespondanceEmetteur;
 
+    // =================== DONNEUR D'ORDRE : ADRESSE ISO 20022 ===================
+
+    @Convert(converter = SensitiveStringConverter.class)
+    @Column(name = "adresse_do_rue", length = 255)
+    private String adresseDonRue;
+
+    @Convert(converter = SensitiveStringConverter.class)
+    @Column(name = "adresse_do_complement", length = 255)
+    private String adresseDonComplement;
+
+    @Column(name = "adresse_do_ville", length = 100)
+    private String adresseDonVille;
+
+    @Column(name = "adresse_do_code_postal", length = 20)
+    private String adresseDonCodePostal;
+
+    @JdbcTypeCode(java.sql.Types.CHAR)
+    @Column(name = "adresse_do_pays", length = 2)
+    private String adresseDonPays;
+
+    // =================== DONNEUR D'ORDRE EFFECTIF (Ultimate Debtor) ===================
+
+    @Convert(converter = SensitiveStringConverter.class)
+    @Column(name = "nom_donneur_ordre_effectif", length = 255)
+    private String nomDonneurOrdreEffectif;
+
+    @Convert(converter = SensitiveStringConverter.class)
+    @Column(name = "adresse_doe_rue", length = 255)
+    private String adressDoeRue;
+
+    @Convert(converter = SensitiveStringConverter.class)
+    @Column(name = "adresse_doe_complement", length = 255)
+    private String adressDoeComplement;
+
+    @Column(name = "adresse_doe_ville", length = 100)
+    private String adressDoeVille;
+
+    @Column(name = "adresse_doe_code_postal", length = 20)
+    private String adressDoeCodePostal;
+
+    @JdbcTypeCode(java.sql.Types.CHAR)
+    @Column(name = "adresse_doe_pays", length = 2)
+    private String adresseDsePays;
+
     // =================== BÉNÉFICIAIRE ===================
 
     @Column(name = "institution_beneficiaire_id", nullable = false)
@@ -131,6 +176,50 @@ public class Operation {
     @Convert(converter = SensitiveStringConverter.class)
     @Column(name = "compte_correspondance_recepteur", length = 255)
     private String compteCorrespondanceRecepteur;
+
+    // =================== BÉNÉFICIAIRE : ADRESSE ISO 20022 ===================
+
+    @Convert(converter = SensitiveStringConverter.class)
+    @Column(name = "adresse_ben_rue", length = 255)
+    private String adresseBenRue;
+
+    @Convert(converter = SensitiveStringConverter.class)
+    @Column(name = "adresse_ben_complement", length = 255)
+    private String adresseBenComplement;
+
+    @Column(name = "adresse_ben_ville", length = 100)
+    private String adresseBenVille;
+
+    @Column(name = "adresse_ben_code_postal", length = 20)
+    private String adresseBenCodePostal;
+
+    @JdbcTypeCode(java.sql.Types.CHAR)
+    @Column(name = "adresse_ben_pays", length = 2)
+    private String adresseBenPays;
+
+    // =================== BÉNÉFICIAIRE EFFECTIF (Ultimate Creditor) ===================
+
+    @Convert(converter = SensitiveStringConverter.class)
+    @Column(name = "nom_beneficiaire_effectif", length = 255)
+    private String nomBeneficiaireEffectif;
+
+    @Convert(converter = SensitiveStringConverter.class)
+    @Column(name = "adresse_bene_rue", length = 255)
+    private String adressBeneRue;
+
+    @Convert(converter = SensitiveStringConverter.class)
+    @Column(name = "adresse_bene_complement", length = 255)
+    private String adressBeneComplement;
+
+    @Column(name = "adresse_bene_ville", length = 100)
+    private String adressBeneVille;
+
+    @Column(name = "adresse_bene_code_postal", length = 20)
+    private String adressBeneCodePostal;
+
+    @JdbcTypeCode(java.sql.Types.CHAR)
+    @Column(name = "adresse_bene_pays", length = 2)
+    private String adressBenePays;
 
     // =================== INFOS CHÈQUE ===================
 

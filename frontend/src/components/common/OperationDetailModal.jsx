@@ -471,6 +471,22 @@ export default function OperationDetailModal({ isOpen, onClose, operationId, onS
                           <span className="text-dark-400 text-[10px] uppercase block">Donneur d'ordre final</span>
                           <span className="text-white text-xs font-semibold mt-0.5 block">{op.nomDonneurOrdre}</span>
                           <span className="text-dark-300 font-mono text-[10px] block">Compte : {op.compteDonneurOrdre}</span>
+                          {op.adresseDonneurOrdre && (
+                            <div className="text-[10px] text-dark-400 mt-1 pl-2 border-l border-dark-700">
+                              <span className="font-semibold text-dark-300">Adresse :</span> {op.adresseDonneurOrdre.rue}{op.adresseDonneurOrdre.complement ? `, ${op.adresseDonneurOrdre.complement}` : ''}, {op.adresseDonneurOrdre.codePostal} {op.adresseDonneurOrdre.ville} ({op.adresseDonneurOrdre.pays})
+                            </div>
+                          )}
+                          {op.nomDonneurOrdreEffectif && (
+                            <div className="pt-2 mt-2 border-t border-dark-800 pl-2">
+                              <span className="text-dark-400 text-[9px] uppercase block">Donneur d'ordre effectif (UltmtDbtr)</span>
+                              <span className="text-white text-xs font-semibold block">{op.nomDonneurOrdreEffectif}</span>
+                              {op.adresseDonneurOrdreEffectif && (
+                                <span className="text-dark-400 text-[10px] block">
+                                  {op.adresseDonneurOrdreEffectif.rue}{op.adresseDonneurOrdreEffectif.complement ? `, ${op.adresseDonneurOrdreEffectif.complement}` : ''}, {op.adresseDonneurOrdreEffectif.codePostal} {op.adresseDonneurOrdreEffectif.ville} ({op.adresseDonneurOrdreEffectif.pays})
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -502,6 +518,22 @@ export default function OperationDetailModal({ isOpen, onClose, operationId, onS
                           <span className="text-dark-400 text-[10px] uppercase block">Bénéficiaire final</span>
                           <span className="text-white text-xs font-semibold mt-0.5 block">{op.nomBeneficiaire}</span>
                           <span className="text-dark-300 font-mono text-[10px] block">Compte : {op.compteBeneficiaire}</span>
+                          {op.adresseBeneficiaire && (
+                            <div className="text-[10px] text-dark-400 mt-1 pl-2 border-l border-dark-700">
+                              <span className="font-semibold text-dark-300">Adresse :</span> {op.adresseBeneficiaire.rue}{op.adresseBeneficiaire.complement ? `, ${op.adresseBeneficiaire.complement}` : ''}, {op.adresseBeneficiaire.codePostal} {op.adresseBeneficiaire.ville} ({op.adresseBeneficiaire.pays})
+                            </div>
+                          )}
+                          {op.nomBeneficiaireEffectif && (
+                            <div className="pt-2 mt-2 border-t border-dark-800 pl-2">
+                              <span className="text-dark-400 text-[9px] uppercase block">Bénéficiaire effectif (UltmtCdtr)</span>
+                              <span className="text-white text-xs font-semibold block">{op.nomBeneficiaireEffectif}</span>
+                              {op.adresseBeneficiaireEffectif && (
+                                <span className="text-dark-400 text-[10px] block">
+                                  {op.adresseBeneficiaireEffectif.rue}{op.adresseBeneficiaireEffectif.complement ? `, ${op.adresseBeneficiaireEffectif.complement}` : ''}, {op.adresseBeneficiaireEffectif.codePostal} {op.adresseBeneficiaireEffectif.ville} ({op.adresseBeneficiaireEffectif.pays})
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>

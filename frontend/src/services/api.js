@@ -99,6 +99,12 @@ export const operationApi = {
   findByReference: (ref) => api.get(`/api/v1/operations/reference/${ref}`),
   getHistorique: (id) => api.get(`/api/v1/operations/${id}/historique`),
   create: (data, pin) => api.post('/api/v1/operations', data, pin ? { headers: { 'X-Validation-PIN': pin } } : {}),
+  bulkImport: (formData, pin) => api.post('/api/v1/operations/bulk', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+      ...(pin ? { 'X-Validation-PIN': pin } : {})
+    }
+  }),
   soumettre: (id, commentaire, pin) => api.post(`/api/v1/operations/${id}/soumettre`, { commentaire }, pin ? { headers: { 'X-Validation-PIN': pin } } : {}),
   valider: (id, nouveauStatut, commentaire, pin) =>
     api.post(`/api/v1/operations/${id}/valider`, { commentaire }, { 
@@ -182,6 +188,16 @@ export const rapportApi = {
   exportBulkPain001: (ids) => api.post('/api/v1/rapports/operations/bulk/pain001', ids, {
     responseType: 'blob'
   }),
+};
+
+// ======================== MONITORING SFTP ========================
+
+export const sftpApi = {
+  getStatus: () => api.get('/api/v1/sftp/status'),
+  getConnections: () => api.get('/api/v1/sftp/connections'),
+  testConnection: (institutionCode, sens) => api.post(`/api/v1/sftp/connections/test/${institutionCode}/${sens}`),
+  getTransfers: (params) => api.get('/api/v1/sftp/transfers', { params }),
+  getTransfersStats: () => api.get('/api/v1/sftp/transfers/stats'),
 };
 
 // ======================== Helpers ========================

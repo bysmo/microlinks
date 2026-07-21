@@ -181,6 +181,14 @@
     @apply bg-slate-50 text-slate-400 border-slate-200;
   }
 
+  .badge-suspendu-aml {
+    @apply bg-amber-50 text-amber-700 border-amber-200;
+  }
+
+  .badge-rejete-aml {
+    @apply bg-rose-50 text-rose-700 border-rose-200;
+  }
+
   .badge-virement {
     @apply bg-[#0b192c]/5 text-[#0b192c] border-[#0b192c]/20;
   }

@@ -19,6 +19,11 @@ public class OperationWorkflowMachine {
             StatutOperation.SUSPENDU_AML,
             StatutOperation.ANNULE
         ),
+        StatutOperation.REJETE_EMETTEUR, Set.of(
+            StatutOperation.SOUMIS,
+            StatutOperation.SUSPENDU_AML,
+            StatutOperation.ANNULE
+        ),
         StatutOperation.SOUMIS, Set.of(
             StatutOperation.ACCEPTE_EMETTEUR,
             StatutOperation.REJETE_EMETTEUR,
@@ -33,8 +38,16 @@ public class OperationWorkflowMachine {
             StatutOperation.REJETE_BANQUE_EMETTRICE
         ),
         StatutOperation.ACCEPTE_BANQUE_EMETTRICE, Set.of(
+            StatutOperation.TRANSMISSING
+        ),
+        StatutOperation.TRANSMISSING, Set.of(
+            StatutOperation.TRANSMITTED,
+            StatutOperation.ACCEPTE_BANQUE_EMETTRICE
+        ),
+        StatutOperation.TRANSMITTED, Set.of(
             StatutOperation.ACCEPTE_BANQUE_RECEPTRICE,
-            StatutOperation.REJETE_BANQUE_RECEPTRICE
+            StatutOperation.REJETE_BANQUE_RECEPTRICE,
+            StatutOperation.REJETE
         ),
         StatutOperation.ACCEPTE_BANQUE_RECEPTRICE, Set.of(
             StatutOperation.ACCEPTE_BENEFICIAIRE,
@@ -68,6 +81,8 @@ public class OperationWorkflowMachine {
             case REJETE_EMETTEUR -> "Rejeté par l'institution émettrice";
             case ACCEPTE_BANQUE_EMETTRICE -> "Accepté par la banque émettrice";
             case REJETE_BANQUE_EMETTRICE -> "Rejeté par la banque émettrice";
+            case TRANSMISSING -> "En cours de transmission";
+            case TRANSMITTED -> "Transmis - En attente de traitement récepteur";
             case ACCEPTE_BANQUE_RECEPTRICE -> "Accepté par la banque réceptrice";
             case REJETE_BANQUE_RECEPTRICE -> "Rejeté par la banque réceptrice";
             case ACCEPTE_BENEFICIAIRE -> "Accepté par l'institution bénéficiaire";
@@ -86,7 +101,9 @@ public class OperationWorkflowMachine {
         return switch (statut) {
             case SOUMIS -> "L'agent de validation de l'institution émettrice doit valider cette opération";
             case ACCEPTE_EMETTEUR -> "La banque correspondante de l'institution émettrice doit valider";
-            case ACCEPTE_BANQUE_EMETTRICE -> "La banque correspondante de l'institution bénéficiaire doit valider";
+            case ACCEPTE_BANQUE_EMETTRICE -> "L'opération est en attente de transmission automatique SFTP";
+            case TRANSMISSING -> "Transmission de l'opération en cours via le canal SFTP";
+            case TRANSMITTED -> "La banque correspondante de l'institution bénéficiaire doit valider cette opération reçue";
             case ACCEPTE_BANQUE_RECEPTRICE -> "L'institution bénéficiaire doit accepter et comptabiliser";
             case ACCEPTE_BENEFICIAIRE -> "Opération prête à être comptabilisée";
             case SUSPENDU_AML -> "Le service de conformité AML/CFT doit valider cette opération";

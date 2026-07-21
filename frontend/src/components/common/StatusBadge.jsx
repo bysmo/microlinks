@@ -14,6 +14,8 @@ const STATUS_CONFIGS = {
   COMPTABILISE: { label: 'Comptabilisé ✓', className: 'badge-comptabilise' },
   REJETE: { label: 'Rejeté', className: 'badge-rejete' },
   ANNULE: { label: 'Annulé', className: 'badge-annule' },
+  SUSPENDU_AML: { label: 'Vérification ALM', className: 'badge-suspendu-aml' },
+  REJETE_AML: { label: 'Bloqué ALM', className: 'badge-rejete-aml' },
 
   // Institutions
   ACTIF: { label: 'Actif', className: 'badge-comptabilise' },

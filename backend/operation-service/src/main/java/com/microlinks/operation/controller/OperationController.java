@@ -117,6 +117,30 @@ public class OperationController {
                         jwt.getClaimAsString("name"), institutionId));
     }
 
+    @PostMapping("/bulk")
+    @Operation(summary = "Importer des opérations en masse depuis un fichier Excel")
+    @PreAuthorize("hasAnyRole('AGENT_SAISIE', 'AGENT_VALIDATION', 'ADMIN_INSTITUTION', 'ADMIN_PLATEFORME')")
+    public ResponseEntity<BulkOperationResult> createBulk(
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
+            @RequestParam("typeDebit") String typeDebit,
+            @RequestParam("institutionEmettriceId") UUID institutionEmettriceId,
+            @RequestParam("nomInstitutionEmettrice") String nomInstitutionEmettrice,
+            @RequestParam("institutionBeneficiaireId") UUID institutionBeneficiaireId,
+            @RequestParam("nomInstitutionBeneficiaire") String nomInstitutionBeneficiaire,
+            @RequestParam(value = "compteDonneurOrdreGlobal", required = false) String compteDonneurOrdreGlobal,
+            @RequestParam(value = "nomDonneurOrdreGlobal", required = false) String nomDonneurOrdreGlobal,
+            @RequestParam(value = "typeOperation", defaultValue = "VIREMENT") com.microlinks.operation.entity.TypeOperation typeOperation,
+            @RequestHeader(name = "X-Validation-PIN", required = false) String pin,
+            @AuthenticationPrincipal Jwt jwt) {
+        validateUserPin(jwt, pin);
+        UUID institutionId = extractInstitutionId(jwt);
+        return ResponseEntity.ok(operationService.createBulk(
+                file, typeDebit, institutionEmettriceId, nomInstitutionEmettrice,
+                institutionBeneficiaireId, nomInstitutionBeneficiaire,
+                compteDonneurOrdreGlobal, nomDonneurOrdreGlobal, typeOperation,
+                jwt.getSubject(), jwt.getClaimAsString("name"), institutionId));
+    }
+
     @PostMapping("/{id}/soumettre")
     @Operation(summary = "Soumettre une opération pour validation")
     @PreAuthorize("hasAnyRole('AGENT_SAISIE', 'AGENT_VALIDATION', 'ADMIN_INSTITUTION')")

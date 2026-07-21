@@ -101,6 +101,16 @@ spring:
               args:
                 status: "403"
 
+        # Bloquer les endpoints internes de l'operation-service
+        - id: operation-internal-block
+          uri: lb://operation-service
+          predicates:
+            - Path=/api/v1/operations/internal/**
+          filters:
+            - name: SetStatus
+              args:
+                status: "403"
+
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
 

@@ -61,4 +61,22 @@ public class InstitutionSftpClient {
             return null;
         }
     }
+
+    /**
+     * Enregistre un log de transfert SFTP dans l'institution-service.
+     */
+    public void saveTransferLog(com.microlinks.sftp.dto.SftpFileTransferDto logDto) {
+        try {
+            webClientBuilder.build()
+                    .post()
+                    .uri(institutionServiceUrl + "/api/v1/institutions/internal/sftp-transfers")
+                    .bodyValue(logDto)
+                    .retrieve()
+                    .toBodilessEntity()
+                    .block();
+            log.debug("Log de transfert SFTP enregistré avec succès : {}", logDto.getNomFichier());
+        } catch (Exception e) {
+            log.error("Erreur lors de l'enregistrement du log de transfert SFTP pour {}", logDto.getNomFichier(), e);
+        }
+    }
 }

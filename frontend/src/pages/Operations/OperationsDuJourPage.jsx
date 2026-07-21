@@ -9,6 +9,7 @@ import DataTable from '../../components/common/DataTable';
 import StatusBadge from '../../components/common/StatusBadge';
 import NouvelleOperationModal from '../../components/common/NouvelleOperationModal';
 import OperationDetailModal from '../../components/common/OperationDetailModal';
+import ImportOperationsMasseModal from '../../components/common/ImportOperationsMasseModal';
 import { operationApi, institutionApi, rapportApi, downloadBlob } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -26,6 +27,7 @@ export default function OperationsDuJourPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [showNewOpModal, setShowNewOpModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [selectedOperationId, setSelectedOperationId] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [workflowAction, setWorkflowAction] = useState(null);
@@ -606,14 +608,24 @@ export default function OperationsDuJourPage() {
             </div>
           )}
           {canCreateOperation && (
-            <button 
-              onClick={() => setShowNewOpModal(true)} 
-              className="btn-primary btn-sm flex items-center gap-2"
-              id="btn-nouvelle-operation"
-            >
-              <Plus className="w-4 h-4" />
-              Nouvelle opération
-            </button>
+            <>
+              <button 
+                onClick={() => setShowNewOpModal(true)} 
+                className="btn-primary btn-sm flex items-center gap-2"
+                id="btn-nouvelle-operation"
+              >
+                <Plus className="w-4 h-4" />
+                Nouvelle opération
+              </button>
+              <button 
+                onClick={() => setShowImportModal(true)} 
+                className="btn-secondary btn-sm flex items-center gap-2"
+                id="btn-import-masse"
+              >
+                <FileText className="w-4 h-4 text-primary-400" />
+                Importer Excel
+              </button>
+            </>
           )}
           <button 
             onClick={() => setShowFilters(!showFilters)} 
@@ -827,6 +839,15 @@ export default function OperationsDuJourPage() {
       <NouvelleOperationModal
         isOpen={showNewOpModal}
         onClose={() => setShowNewOpModal(false)}
+        onSuccess={() => {
+          fetchData();
+        }}
+      />
+
+      {/* Import en masse Modal */}
+      <ImportOperationsMasseModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
         onSuccess={() => {
           fetchData();
         }}

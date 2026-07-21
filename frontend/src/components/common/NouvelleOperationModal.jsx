@@ -93,6 +93,19 @@ const initialForm = {
   // Donneur d'ordre client
   compteDonneurOrdre: '',
   nomDonneurOrdre: '',
+  // Adresse DO
+  adresseDoRue: '',
+  adresseDoComplement: '',
+  adresseDoVille: '',
+  adresseDoCodePostal: '',
+  adresseDoPays: '',
+  // DO effectif
+  nomDonneurOrdreEffectif: '',
+  adresseDoeRue: '',
+  adresseDoeComplement: '',
+  adresseDoeVille: '',
+  adresseDoeCodePostal: '',
+  adresseDoePays: '',
   // Bénéficiaire
   institutionBeneficiaireId: '',
   nomInstitutionBeneficiaire: '',
@@ -102,6 +115,19 @@ const initialForm = {
   compteCorrespondanceRecepteur: '',
   compteBeneficiaire: '',
   nomBeneficiaire: '',
+  // Adresse BEN
+  adresseBenRue: '',
+  adresseBenComplement: '',
+  adresseBenVille: '',
+  adresseBenCodePostal: '',
+  adresseBenPays: '',
+  // BEN effectif
+  nomBeneficiaireEffectif: '',
+  adresseBeneRue: '',
+  adresseBeneComplement: '',
+  adresseBeneVille: '',
+  adresseBeneCodePostal: '',
+  adresseBenePays: '',
   // Chèque
   numeroCheque: '',
 };
@@ -114,6 +140,8 @@ export default function NouvelleOperationModal({ isOpen, onClose, onSuccess }) {
 
   const [showPinModal, setShowPinModal] = useState(false);
   const [pinCallback, setPinCallback] = useState(null);
+  const [showAlmDO, setShowAlmDO] = useState(false);
+  const [showAlmBen, setShowAlmBen] = useState(false);
 
   const executeWithPin = (actionFn) => {
     setPinCallback(() => async (pin) => {
@@ -387,8 +415,8 @@ export default function NouvelleOperationModal({ isOpen, onClose, onSuccess }) {
     // Filtrage local des comptes déjà chargés par la banque sélectionnée
     const filtered = selectedId
       ? mesComptesEmetteur.filter(
-          c => c.banqueDomiciliaireId && String(c.banqueDomiciliaireId).trim() === String(selectedId).trim()
-        )
+        c => c.banqueDomiciliaireId && String(c.banqueDomiciliaireId).trim() === String(selectedId).trim()
+      )
       : [];
 
     setForm(prev => ({
@@ -493,8 +521,8 @@ export default function NouvelleOperationModal({ isOpen, onClose, onSuccess }) {
     // Filtrer les comptes pour cette banque et pré-sélectionner le premier
     const filtered = selectedId
       ? comptesRecepteur.filter(
-          c => c.banqueDomiciliaireId && String(c.banqueDomiciliaireId).trim() === String(selectedId).trim()
-        )
+        c => c.banqueDomiciliaireId && String(c.banqueDomiciliaireId).trim() === String(selectedId).trim()
+      )
       : [];
     setForm(prev => ({
       ...prev,
@@ -545,29 +573,48 @@ export default function NouvelleOperationModal({ isOpen, onClose, onSuccess }) {
     return true;
   };
 
-  const buildPayload = () => ({
-    typeOperation: form.typeOperation,
-    dateOperation: form.dateOperation || undefined,
-    dateValeur: form.dateValeur || undefined,
-    montant: parseFloat(form.montant),
-    devise: form.devise,
-    motif: form.motif || undefined,
-    institutionEmettriceId: form.institutionEmettriceId,
-    nomInstitutionEmettrice: form.nomInstitutionEmettrice,
-    compteDonneurOrdre: form.compteDonneurOrdre,
-    nomDonneurOrdre: form.nomDonneurOrdre,
-    banqueCorrespondanteEmettriceId: form.banqueCorrespondanteEmettriceId || undefined,
-    nomBanqueCorrespondanteEmettrice: form.nomBanqueCorrespondanteEmettrice || undefined,
-    compteCorrespondanceEmetteur: form.compteCorrespondanceEmetteur || undefined,
-    institutionBeneficiaireId: form.institutionBeneficiaireId,
-    nomInstitutionBeneficiaire: form.nomInstitutionBeneficiaire,
-    compteBeneficiaire: form.compteBeneficiaire,
-    nomBeneficiaire: form.nomBeneficiaire,
-    banqueCorrespondanteReceptriceId: form.banqueCorrespondanteReceptriceId || undefined,
-    nomBanqueCorrespondanteReceptrice: form.nomBanqueCorrespondanteReceptrice || undefined,
-    compteCorrespondanceRecepteur: form.compteCorrespondanceRecepteur || undefined,
-    numeroCheque: form.typeOperation === 'CHEQUE' ? form.numeroCheque : undefined,
-  });
+  const buildPayload = () => {
+    const cleanAddress = (rue, comp, vil, cp, pays) => {
+      if (!rue && !comp && !vil && !cp && !pays) return undefined;
+      return {
+        rue: rue || undefined,
+        complement: comp || undefined,
+        ville: vil || undefined,
+        codePostal: cp || undefined,
+        pays: pays || undefined
+      };
+    };
+
+    return {
+      typeOperation: form.typeOperation,
+      dateOperation: form.dateOperation || undefined,
+      dateValeur: form.dateValeur || undefined,
+      montant: parseFloat(form.montant),
+      devise: form.devise,
+      motif: form.motif || undefined,
+      institutionEmettriceId: form.institutionEmettriceId,
+      nomInstitutionEmettrice: form.nomInstitutionEmettrice,
+      compteDonneurOrdre: form.compteDonneurOrdre,
+      nomDonneurOrdre: form.nomDonneurOrdre,
+      banqueCorrespondanteEmettriceId: form.banqueCorrespondanteEmettriceId || undefined,
+      nomBanqueCorrespondanteEmettrice: form.nomBanqueCorrespondanteEmettrice || undefined,
+      compteCorrespondanceEmetteur: form.compteCorrespondanceEmetteur || undefined,
+      adresseDonneurOrdre: cleanAddress(form.adresseDoRue, form.adresseDoComplement, form.adresseDoVille, form.adresseDoCodePostal, form.adresseDoPays),
+      nomDonneurOrdreEffectif: form.nomDonneurOrdreEffectif || undefined,
+      adresseDonneurOrdreEffectif: cleanAddress(form.adresseDoeRue, form.adresseDoeComplement, form.adresseDoeVille, form.adresseDoeCodePostal, form.adresseDoePays),
+      institutionBeneficiaireId: form.institutionBeneficiaireId,
+      nomInstitutionBeneficiaire: form.nomInstitutionBeneficiaire,
+      compteBeneficiaire: form.compteBeneficiaire,
+      nomBeneficiaire: form.nomBeneficiaire,
+      banqueCorrespondanteReceptriceId: form.banqueCorrespondanteReceptriceId || undefined,
+      nomBanqueCorrespondanteReceptrice: form.nomBanqueCorrespondanteReceptrice || undefined,
+      compteCorrespondanceRecepteur: form.compteCorrespondanceRecepteur || undefined,
+      adresseBeneficiaire: cleanAddress(form.adresseBenRue, form.adresseBenComplement, form.adresseBenVille, form.adresseBenCodePostal, form.adresseBenPays),
+      nomBeneficiaireEffectif: form.nomBeneficiaireEffectif || undefined,
+      adresseBeneficiaireEffectif: cleanAddress(form.adresseBeneRue, form.adresseBeneComplement, form.adresseBeneVille, form.adresseBeneCodePostal, form.adresseBenePays),
+      numeroCheque: form.typeOperation === 'CHEQUE' ? form.numeroCheque : undefined,
+    };
+  };
 
   const handleSubmit = (andSubmit = false) => {
     if (!validate()) return;
@@ -803,6 +850,67 @@ export default function NouvelleOperationModal({ isOpen, onClose, onSuccess }) {
                 />
               </div>
             </div>
+            {/* Bouton de bascule pour afficher les détails ALM / Adresse */}
+            <div className="mt-3">
+              <button
+                type="button"
+                onClick={() => setShowAlmDO(!showAlmDO)}
+                className="text-xs text-blue-400 hover:text-blue-300 font-semibold flex items-center gap-1 focus:outline-none"
+              >
+                {showAlmDO ? '▼ Masquer' : '▶ Afficher'} l'adresse & donneur d'ordre effectif (ALM / ISO 20022)
+              </button>
+            </div>
+
+            {showAlmDO && (
+              <div className="mt-4 p-4 rounded-lg bg-dark-900/40 border border-dark-700/60 space-y-4">
+                {/* Adresse DO principal */}
+                <div>
+                  <h4 className="text-xs font-semibold text-blue-400 mb-2">Adresse du Donneur d'Ordre</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="sm:col-span-2">
+                      <TextField label="Rue et numéro (StrtNm)" id="do-rue" name="adresseDoRue" value={form.adresseDoRue} onChange={handleChange} placeholder="Ex: 12 Rue du Commerce" />
+                    </div>
+                    <div>
+                      <TextField label="Complément (BldgNm)" id="do-comp" name="adresseDoComplement" value={form.adresseDoComplement} onChange={handleChange} placeholder="Ex: Appt 4B" />
+                    </div>
+                    <div>
+                      <TextField label="Ville (TwnNm)" id="do-ville" name="adresseDoVille" value={form.adresseDoVille} onChange={handleChange} placeholder="Ex: Dakar" />
+                    </div>
+                    <div>
+                      <TextField label="Code Postal (PstCd)" id="do-cp" name="adresseDoCodePostal" value={form.adresseDoCodePostal} onChange={handleChange} placeholder="Ex: 10000" />
+                    </div>
+                    <div>
+                      <TextField label="Code Pays (Ctry - ISO 2 Lettres)" id="do-pays" name="adresseDoPays" value={form.adresseDoPays} onChange={handleChange} placeholder="Ex: SN" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* DO effectif */}
+                <div className="pt-3 border-t border-white/5">
+                  <h4 className="text-xs font-semibold text-blue-400 mb-2">Donneur d'Ordre Effectif (Ultimate Debtor)</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="sm:col-span-3">
+                      <TextField label="Nom complet du DO effectif" id="doe-nom" name="nomDonneurOrdreEffectif" value={form.nomDonneurOrdreEffectif} onChange={handleChange} placeholder="Nom / Raison sociale du bénéficiaire réel du débit" />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <TextField label="Rue et numéro (StrtNm)" id="doe-rue" name="adresseDoeRue" value={form.adresseDoeRue} onChange={handleChange} placeholder="Ex: 45 Avenue de la Liberté" />
+                    </div>
+                    <div>
+                      <TextField label="Complément (BldgNm)" id="doe-comp" name="adresseDoeComplement" value={form.adresseDoeComplement} onChange={handleChange} placeholder="Ex: Bureau 12" />
+                    </div>
+                    <div>
+                      <TextField label="Ville (TwnNm)" id="doe-ville" name="adresseDoeVille" value={form.adresseDoeVille} onChange={handleChange} placeholder="Ex: Bamako" />
+                    </div>
+                    <div>
+                      <TextField label="Code Postal (PstCd)" id="doe-cp" name="adresseDoeCodePostal" value={form.adresseDoeCodePostal} onChange={handleChange} placeholder="Ex: 2000" />
+                    </div>
+                    <div>
+                      <TextField label="Code Pays (Ctry - ISO 2 Lettres)" id="doe-pays" name="adresseDoePays" value={form.adresseDoePays} onChange={handleChange} placeholder="Ex: ML" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -968,6 +1076,67 @@ export default function NouvelleOperationModal({ isOpen, onClose, onSuccess }) {
                 />
               </div>
             </div>
+            {/* Bouton de bascule pour afficher les détails ALM / Adresse */}
+            <div className="mt-3">
+              <button
+                type="button"
+                onClick={() => setShowAlmBen(!showAlmBen)}
+                className="text-xs text-blue-400 hover:text-blue-300 font-semibold flex items-center gap-1 focus:outline-none"
+              >
+                {showAlmBen ? '▼ Masquer' : '▶ Afficher'} l'adresse & bénéficiaire effectif (ALM / ISO 20022)
+              </button>
+            </div>
+
+            {showAlmBen && (
+              <div className="mt-4 p-4 rounded-lg bg-dark-900/40 border border-dark-700/60 space-y-4">
+                {/* Adresse BEN principal */}
+                <div>
+                  <h4 className="text-xs font-semibold text-emerald-400 mb-2">Adresse du Bénéficiaire</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="sm:col-span-2">
+                      <TextField label="Rue et numéro (StrtNm)" id="ben-rue" name="adresseBenRue" value={form.adresseBenRue} onChange={handleChange} placeholder="Ex: 50 Rue de la Gare" />
+                    </div>
+                    <div>
+                      <TextField label="Complément (BldgNm)" id="ben-comp" name="adresseBenComplement" value={form.adresseBenComplement} onChange={handleChange} placeholder="Ex: Bâtiment A" />
+                    </div>
+                    <div>
+                      <TextField label="Ville (TwnNm)" id="ben-ville" name="adresseBenVille" value={form.adresseBenVille} onChange={handleChange} placeholder="Ex: Douala" />
+                    </div>
+                    <div>
+                      <TextField label="Code Postal (PstCd)" id="ben-cp" name="adresseBenCodePostal" value={form.adresseBenCodePostal} onChange={handleChange} placeholder="Ex: BP 120" />
+                    </div>
+                    <div>
+                      <TextField label="Code Pays (Ctry - ISO 2 Lettres)" id="ben-pays" name="adresseBenPays" value={form.adresseBenPays} onChange={handleChange} placeholder="Ex: CM" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* BEN effectif */}
+                <div className="pt-3 border-t border-white/5">
+                  <h4 className="text-xs font-semibold text-emerald-400 mb-2">Bénéficiaire Effectif (Ultimate Creditor)</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="sm:col-span-3">
+                      <TextField label="Nom complet du BEN effectif" id="bene-nom" name="nomBeneficiaireEffectif" value={form.nomBeneficiaireEffectif} onChange={handleChange} placeholder="Nom / Raison sociale du destinataire final des fonds" />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <TextField label="Rue et numéro (StrtNm)" id="bene-rue" name="adresseBeneRue" value={form.adresseBeneRue} onChange={handleChange} placeholder="Ex: 102 Boulevard du 20 Mai" />
+                    </div>
+                    <div>
+                      <TextField label="Complément (BldgNm)" id="bene-comp" name="adresseBeneComplement" value={form.adresseBeneComplement} onChange={handleChange} placeholder="Ex: Etage 2" />
+                    </div>
+                    <div>
+                      <TextField label="Ville (TwnNm)" id="bene-ville" name="adresseBeneVille" value={form.adresseBeneVille} onChange={handleChange} placeholder="Ex: Yaoundé" />
+                    </div>
+                    <div>
+                      <TextField label="Code Postal (PstCd)" id="bene-cp" name="adresseBeneCodePostal" value={form.adresseBeneCodePostal} onChange={handleChange} placeholder="Ex: BP 500" />
+                    </div>
+                    <div>
+                      <TextField label="Code Pays (Ctry - ISO 2 Lettres)" id="bene-pays" name="adresseBenePays" value={form.adresseBenePays} onChange={handleChange} placeholder="Ex: CM" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

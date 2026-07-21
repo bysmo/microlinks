@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!--
+        Migration 008 — Acteurs effectifs (UBO) et adresses ISO 20022
+        Ajoute les champs pour le Donneur d'Ordre Effectif (Ultimate Debtor) et le
+        Bénéficiaire Effectif (Ultimate Creditor) avec leurs adresses structurées
+        conformément au standard ISO 20022 PostalAddress (Adr2).
+    -->
+    <changeSet id="op-008-effective-parties" author="microlinks">
+
+        <!-- =================== DONNEUR D'ORDRE EFFECTIF (Ultimate Debtor) =================== -->
+        <!-- Nom complet du donneur d'ordre effectif (bénéficiaire réel du débit) -->
+        <addColumn tableName="operations">
+            <column name="nom_donneur_ordre_effectif" type="VARCHAR(255)" remarks="Nom du donneur d'ordre effectif (Ultimate Debtor) - chiffré FLE"/>
+        </addColumn>
+
+        <!-- Adresse ISO 20022 du Donneur d'Ordre (principal) -->
+        <addColumn tableName="operations">
+            <column name="adresse_do_rue" type="VARCHAR(255)" remarks="Rue / Adresse ligne 1 - Donneur d'Ordre (ISO 20022 StrtNm)"/>
+        </addColumn>
+        <addColumn tableName="operations">
+            <column name="adresse_do_complement" type="VARCHAR(255)" remarks="Complément d'adresse ligne 2 - Donneur d'Ordre (ISO 20022 BldgNm)"/>
+        </addColumn>
+        <addColumn tableName="operations">
+            <column name="adresse_do_ville" type="VARCHAR(100)" remarks="Ville - Donneur d'Ordre (ISO 20022 TwnNm)"/>
+        </addColumn>
+        <addColumn tableName="operations">
+            <column name="adresse_do_code_postal" type="VARCHAR(20)" remarks="Code postal - Donneur d'Ordre (ISO 20022 PstCd)"/>
+        </addColumn>
+        <addColumn tableName="operations">
+            <column name="adresse_do_pays" type="CHAR(2)" remarks="Code pays ISO 3166-1 alpha-2 - Donneur d'Ordre (ISO 20022 Ctry)"/>
+        </addColumn>
+
+        <!-- Adresse ISO 20022 du Donneur d'Ordre Effectif -->
+        <addColumn tableName="operations">
+            <column name="adresse_doe_rue" type="VARCHAR(255)" remarks="Rue / Adresse ligne 1 - DO Effectif (ISO 20022 StrtNm)"/>
+        </addColumn>
+        <addColumn tableName="operations">
+            <column name="adresse_doe_complement" type="VARCHAR(255)" remarks="Complément d'adresse ligne 2 - DO Effectif (ISO 20022 BldgNm)"/>
+        </addColumn>
+        <addColumn tableName="operations">
+            <column name="adresse_doe_ville" type="VARCHAR(100)" remarks="Ville - DO Effectif (ISO 20022 TwnNm)"/>
+        </addColumn>
+        <addColumn tableName="operations">
+            <column name="adresse_doe_code_postal" type="VARCHAR(20)" remarks="Code postal - DO Effectif (ISO 20022 PstCd)"/>
+        </addColumn>
+        <addColumn tableName="operations">
+            <column name="adresse_doe_pays" type="CHAR(2)" remarks="Code pays ISO 3166-1 alpha-2 - DO Effectif (ISO 20022 Ctry)"/>
+        </addColumn>
+
+        <!-- =================== BÉNÉFICIAIRE EFFECTIF (Ultimate Creditor) =================== -->
+        <!-- Nom complet du bénéficiaire effectif (destinataire final des fonds) -->
+        <addColumn tableName="operations">
+            <column name="nom_beneficiaire_effectif" type="VARCHAR(255)" remarks="Nom du bénéficiaire effectif (Ultimate Creditor) - chiffré FLE"/>
+        </addColumn>
+
+        <!-- Adresse ISO 20022 du Bénéficiaire (principal) -->
+        <addColumn tableName="operations">
+            <column name="adresse_ben_rue" type="VARCHAR(255)" remarks="Rue / Adresse ligne 1 - Bénéficiaire (ISO 20022 StrtNm)"/>
+        </addColumn>
+        <addColumn tableName="operations">
+            <column name="adresse_ben_complement" type="VARCHAR(255)" remarks="Complément d'adresse ligne 2 - Bénéficiaire (ISO 20022 BldgNm)"/>
+        </addColumn>
+        <addColumn tableName="operations">
+            <column name="adresse_ben_ville" type="VARCHAR(100)" remarks="Ville - Bénéficiaire (ISO 20022 TwnNm)"/>
+        </addColumn>
+        <addColumn tableName="operations">
+            <column name="adresse_ben_code_postal" type="VARCHAR(20)" remarks="Code postal - Bénéficiaire (ISO 20022 PstCd)"/>
+        </addColumn>
+        <addColumn tableName="operations">
+            <column name="adresse_ben_pays" type="CHAR(2)" remarks="Code pays ISO 3166-1 alpha-2 - Bénéficiaire (ISO 20022 Ctry)"/>
+        </addColumn>
+
+        <!-- Adresse ISO 20022 du Bénéficiaire Effectif -->
+        <addColumn tableName="operations">
+            <column name="adresse_bene_rue" type="VARCHAR(255)" remarks="Rue / Adresse ligne 1 - BEN Effectif (ISO 20022 StrtNm)"/>
+        </addColumn>
+        <addColumn tableName="operations">
+            <column name="adresse_bene_complement" type="VARCHAR(255)" remarks="Complément d'adresse ligne 2 - BEN Effectif (ISO 20022 BldgNm)"/>
+        </addColumn>
+        <addColumn tableName="operations">
+            <column name="adresse_bene_ville" type="VARCHAR(100)" remarks="Ville - BEN Effectif (ISO 20022 TwnNm)"/>
+        </addColumn>
+        <addColumn tableName="operations">
+            <column name="adresse_bene_code_postal" type="VARCHAR(20)" remarks="Code postal - BEN Effectif (ISO 20022 PstCd)"/>
+        </addColumn>
+        <addColumn tableName="operations">
+            <column name="adresse_bene_pays" type="CHAR(2)" remarks="Code pays ISO 3166-1 alpha-2 - BEN Effectif (ISO 20022 Ctry)"/>
+        </addColumn>
+
+    </changeSet>
+
+</databaseChangeLog>

@@ -111,4 +111,6 @@ public interface OperationRepository extends JpaRepository<Operation, UUID> {
         @Param("dateDebut") LocalDate dateDebut,
         @Param("dateFin") LocalDate dateFin
     );
+
+    List<Operation> findByStatut(StatutOperation statut);
 }

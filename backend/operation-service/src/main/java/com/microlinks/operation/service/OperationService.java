@@ -7,6 +7,7 @@ import com.microlinks.operation.repository.OperationRepository;
 import com.microlinks.operation.repository.HistoriqueStatutRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.ss.usermodel.*;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -15,9 +16,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
@@ -84,6 +88,11 @@ public class OperationService {
 
         LocalDateTime now = LocalDateTime.now();
 
+        PostalAddressDto addrDO   = req.getAdresseDonneurOrdre();
+        PostalAddressDto addrDOE  = req.getAdresseDonneurOrdreEffectif();
+        PostalAddressDto addrBEN  = req.getAdresseBeneficiaire();
+        PostalAddressDto addrBENE = req.getAdresseBeneficiaireEffectif();
+
         Operation op = Operation.builder()
                 .id(opId)
                 .tenantId(activeTenantId)
@@ -103,6 +112,19 @@ public class OperationService {
                 .banqueCorrespondanteEmettriceId(req.getBanqueCorrespondanteEmettriceId())
                 .nomBanqueCorrespondanteEmettrice(req.getNomBanqueCorrespondanteEmettrice())
                 .compteCorrespondanceEmetteur(req.getCompteCorrespondanceEmetteur())
+                // Adresse DO (ISO 20022)
+                .adresseDonRue(addrDO != null ? addrDO.getRue() : null)
+                .adresseDonComplement(addrDO != null ? addrDO.getComplement() : null)
+                .adresseDonVille(addrDO != null ? addrDO.getVille() : null)
+                .adresseDonCodePostal(addrDO != null ? addrDO.getCodePostal() : null)
+                .adresseDonPays(addrDO != null ? addrDO.getPays() : null)
+                // DO Effectif (Ultimate Debtor)
+                .nomDonneurOrdreEffectif(req.getNomDonneurOrdreEffectif())
+                .adressDoeRue(addrDOE != null ? addrDOE.getRue() : null)
+                .adressDoeComplement(addrDOE != null ? addrDOE.getComplement() : null)
+                .adressDoeVille(addrDOE != null ? addrDOE.getVille() : null)
+                .adressDoeCodePostal(addrDOE != null ? addrDOE.getCodePostal() : null)
+                .adresseDsePays(addrDOE != null ? addrDOE.getPays() : null)
                 // Beneficiaire
                 .institutionBeneficiaireId(req.getInstitutionBeneficiaireId())
                 .nomInstitutionBeneficiaire(req.getNomInstitutionBeneficiaire())
@@ -111,6 +133,19 @@ public class OperationService {
                 .banqueCorrespondanteReceptriceId(req.getBanqueCorrespondanteReceptriceId())
                 .nomBanqueCorrespondanteReceptrice(req.getNomBanqueCorrespondanteReceptrice())
                 .compteCorrespondanceRecepteur(req.getCompteCorrespondanceRecepteur())
+                // Adresse BEN (ISO 20022)
+                .adresseBenRue(addrBEN != null ? addrBEN.getRue() : null)
+                .adresseBenComplement(addrBEN != null ? addrBEN.getComplement() : null)
+                .adresseBenVille(addrBEN != null ? addrBEN.getVille() : null)
+                .adresseBenCodePostal(addrBEN != null ? addrBEN.getCodePostal() : null)
+                .adresseBenPays(addrBEN != null ? addrBEN.getPays() : null)
+                // BEN Effectif (Ultimate Creditor)
+                .nomBeneficiaireEffectif(req.getNomBeneficiaireEffectif())
+                .adressBeneRue(addrBENE != null ? addrBENE.getRue() : null)
+                .adressBeneComplement(addrBENE != null ? addrBENE.getComplement() : null)
+                .adressBeneVille(addrBENE != null ? addrBENE.getVille() : null)
+                .adressBeneCodePostal(addrBENE != null ? addrBENE.getCodePostal() : null)
+                .adressBenePays(addrBENE != null ? addrBENE.getPays() : null)
                 // Cheque
                 .numeroCheque(req.getNumeroCheque())
                 // Tracabilite
@@ -136,14 +171,23 @@ public class OperationService {
     public OperationDto soumettre(UUID id, String commentaire, String userId, String userName, UUID institutionId) {
         Operation op = getOperationById(id);
 
-        // Automated AML screening of sender and beneficiary names
-        boolean match = amlService.checkSanctionMatch(op.getNomDonneurOrdre())
-                     || amlService.checkSanctionMatch(op.getNomBeneficiaire());
+        // ── Screening ALM/AML sur les 4 acteurs (ISO 20022 : Dbtr, UltmtDbtr, Cdtr, UltmtCdtr) ──
+        boolean matchDO  = amlService.checkSanctionMatch(op.getNomDonneurOrdre());
+        boolean matchDOE = amlService.checkSanctionMatch(op.getNomDonneurOrdreEffectif());
+        boolean matchBEN = amlService.checkSanctionMatch(op.getNomBeneficiaire());
+        boolean matchBENE= amlService.checkSanctionMatch(op.getNomBeneficiaireEffectif());
 
-        if (match) {
-            log.warn("[AML Block] Match detected during submission of operation {}. Freezing transaction.", op.getReferenceUnique());
+        if (matchDO || matchDOE || matchBEN || matchBENE) {
+            StringBuilder acteurs = new StringBuilder();
+            if (matchDO)   acteurs.append("Donneur d'Ordre (").append(op.getNomDonneurOrdre()).append(") ");
+            if (matchDOE)  acteurs.append("DO Effectif (").append(op.getNomDonneurOrdreEffectif()).append(") ");
+            if (matchBEN)  acteurs.append("Bénéficiaire (").append(op.getNomBeneficiaire()).append(") ");
+            if (matchBENE) acteurs.append("BEN Effectif (").append(op.getNomBeneficiaireEffectif()).append(") ");
+            log.warn("[ALM Block] Correspondance détectée sur opération {} — Acteurs : {}",
+                    op.getReferenceUnique(), acteurs.toString().trim());
             return changerStatut(id, StatutOperation.SUSPENDU_AML,
-                    "[Alerte AML/CFT] Correspondance détectée dans les listes de sanctions. Opération suspendue.",
+                    "[Alerte ALM/CFT] Correspondance détectée dans les listes de sanctions pour : "
+                            + acteurs.toString().trim() + ". Opération suspendue en attente de vérification ALM.",
                     userId, userName, institutionId);
         }
 
@@ -213,6 +257,20 @@ public class OperationService {
         }
 
         return changerStatut(id, StatutOperation.ANNULE, motif, userId, userId, institutionId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<OperationDto> findByStatut(StatutOperation statut) {
+        return operationRepository.findByStatut(statut).stream()
+                .map(this::toDto)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    @Transactional
+    public void updateStatusBatch(List<UUID> ids, StatutOperation nouveauStatut, String actorId, String actorNom) {
+        for (UUID id : ids) {
+            changerStatut(id, nouveauStatut, "Mise à jour automatique SFTP", actorId, actorNom, null);
+        }
     }
 
     // ===================== STATS =====================
@@ -346,6 +404,7 @@ public class OperationService {
                 .montant(op.getMontant())
                 .devise(op.getDevise())
                 .motif(op.getMotif())
+                // Émetteur
                 .institutionEmettriceId(op.getInstitutionEmettriceId())
                 .nomInstitutionEmettrice(op.getNomInstitutionEmettrice())
                 .compteDonneurOrdre(op.getCompteDonneurOrdre())
@@ -353,6 +412,15 @@ public class OperationService {
                 .banqueCorrespondanteEmettriceId(op.getBanqueCorrespondanteEmettriceId())
                 .nomBanqueCorrespondanteEmettrice(op.getNomBanqueCorrespondanteEmettrice())
                 .compteCorrespondanceEmetteur(op.getCompteCorrespondanceEmetteur())
+                .adresseDonneurOrdre(buildAddress(
+                        op.getAdresseDonRue(), op.getAdresseDonComplement(),
+                        op.getAdresseDonVille(), op.getAdresseDonCodePostal(), op.getAdresseDonPays()))
+                // DO Effectif
+                .nomDonneurOrdreEffectif(op.getNomDonneurOrdreEffectif())
+                .adresseDonneurOrdreEffectif(buildAddress(
+                        op.getAdressDoeRue(), op.getAdressDoeComplement(),
+                        op.getAdressDoeVille(), op.getAdressDoeCodePostal(), op.getAdresseDsePays()))
+                // Bénéficiaire
                 .institutionBeneficiaireId(op.getInstitutionBeneficiaireId())
                 .nomInstitutionBeneficiaire(op.getNomInstitutionBeneficiaire())
                 .compteBeneficiaire(op.getCompteBeneficiaire())
@@ -360,6 +428,14 @@ public class OperationService {
                 .banqueCorrespondanteReceptriceId(op.getBanqueCorrespondanteReceptriceId())
                 .nomBanqueCorrespondanteReceptrice(op.getNomBanqueCorrespondanteReceptrice())
                 .compteCorrespondanceRecepteur(op.getCompteCorrespondanceRecepteur())
+                .adresseBeneficiaire(buildAddress(
+                        op.getAdresseBenRue(), op.getAdresseBenComplement(),
+                        op.getAdresseBenVille(), op.getAdresseBenCodePostal(), op.getAdresseBenPays()))
+                // BEN Effectif
+                .nomBeneficiaireEffectif(op.getNomBeneficiaireEffectif())
+                .adresseBeneficiaireEffectif(buildAddress(
+                        op.getAdressBeneRue(), op.getAdressBeneComplement(),
+                        op.getAdressBeneVille(), op.getAdressBeneCodePostal(), op.getAdressBenePays()))
                 .numeroCheque(op.getNumeroCheque())
                 .commentaireRejet(op.getCommentaireRejet())
                 .creePar(op.getCreePar())
@@ -368,6 +444,161 @@ public class OperationService {
                 .previousHash(op.getPreviousHash())
                 .hash(op.getHash())
                 .build();
+    }
+
+    /**
+     * Construit un PostalAddressDto uniquement si au moins un champ est renseigné.
+     */
+    private PostalAddressDto buildAddress(String rue, String complement, String ville, String codePostal, String pays) {
+        if (rue == null && complement == null && ville == null && codePostal == null && pays == null) {
+            return null;
+        }
+        return PostalAddressDto.builder()
+                .rue(rue).complement(complement).ville(ville).codePostal(codePostal).pays(pays)
+                .build();
+    }
+
+    // ===================== IMPORT EN MASSE (Excel) =====================
+
+    /**
+     * Importe une liste d'opérations depuis un fichier Excel.
+     *
+     * Colonnes attendues dans le fichier (1 entête, données à partir de la ligne 2) :
+     *   A: compte_donneur_ordre   (obligatoire si typeDebit=UNITAIRE, ignoré si GLOBAL)
+     *   B: nom_donneur_ordre      (obligatoire si typeDebit=UNITAIRE, ignoré si GLOBAL)
+     *   C: compte_beneficiaire    (obligatoire)
+     *   D: nom_beneficiaire       (obligatoire)
+     *   E: montant                (obligatoire, décimal)
+     *   F: devise                 (obligatoire, ex : XOF)
+     *   G: motif                  (optionnel)
+     *   H: nom_do_effectif        (optionnel)
+     *   I: nom_ben_effectif       (optionnel)
+     *
+     * @param file                        Fichier Excel (.xlsx ou .xls)
+     * @param typeDebit                   "GLOBAL" ou "UNITAIRE"
+     * @param institutionEmettriceId      UUID de l'institution émettrice
+     * @param nomInstitutionEmettrice     Nom de l'institution émettrice
+     * @param institutionBeneficiaireId   UUID de l'institution bénéficiaire
+     * @param nomInstitutionBeneficiaire  Nom de l'institution bénéficiaire
+     * @param compteDonneurOrdreGlobal    Numéro de compte DO global (si typeDebit=GLOBAL)
+     * @param nomDonneurOrdreGlobal       Nom DO global (si typeDebit=GLOBAL)
+     * @param typeOperation               Type d'opération (défaut : VIREMENT)
+     */
+    @Transactional
+    public BulkOperationResult createBulk(
+            MultipartFile file,
+            String typeDebit,
+            UUID institutionEmettriceId,
+            String nomInstitutionEmettrice,
+            UUID institutionBeneficiaireId,
+            String nomInstitutionBeneficiaire,
+            String compteDonneurOrdreGlobal,
+            String nomDonneurOrdreGlobal,
+            com.microlinks.operation.entity.TypeOperation typeOperation,
+            String userId,
+            String userName,
+            UUID institutionId) {
+
+        boolean isGlobal = "GLOBAL".equalsIgnoreCase(typeDebit);
+        List<BulkOperationLineResult> details = new ArrayList<>();
+        int totalSucces = 0;
+        int totalErreurs = 0;
+
+        try (org.apache.poi.ss.usermodel.Workbook workbook =
+                     org.apache.poi.ss.usermodel.WorkbookFactory.create(file.getInputStream())) {
+
+            org.apache.poi.ss.usermodel.Sheet sheet = workbook.getSheetAt(0);
+            // Ligne 0 = entête, données à partir de 1
+            for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+                org.apache.poi.ss.usermodel.Row row = sheet.getRow(i);
+                if (row == null) continue;
+
+                String compteDO, nomDO;
+                if (isGlobal) {
+                    compteDO = compteDonneurOrdreGlobal != null ? compteDonneurOrdreGlobal : "";
+                    nomDO    = nomDonneurOrdreGlobal   != null ? nomDonneurOrdreGlobal   : "";
+                } else {
+                    compteDO = cellValue(row.getCell(0));
+                    nomDO    = cellValue(row.getCell(1));
+                }
+
+                String compteBen  = cellValue(row.getCell(2));
+                String nomBen     = cellValue(row.getCell(3));
+                String montantStr = cellValue(row.getCell(4));
+                String devise     = cellValue(row.getCell(5));
+                String motif      = cellValue(row.getCell(6));
+                String nomDOE     = cellValue(row.getCell(7));
+                String nomBENE    = cellValue(row.getCell(8));
+
+                try {
+                    if (compteDO.isBlank() || nomDO.isBlank() || compteBen.isBlank() || nomBen.isBlank() || montantStr.isBlank()) {
+                        throw new IllegalArgumentException("Données obligatoires manquantes (compte DO, nom DO, compte BEN, nom BEN, montant)");
+                    }
+                    BigDecimal montant = new BigDecimal(montantStr.replace(",", ".").trim());
+                    if (devise.isBlank()) devise = "XOF";
+
+                    OperationCreateRequest req = new OperationCreateRequest();
+                    req.setTypeOperation(typeOperation != null ? typeOperation : com.microlinks.operation.entity.TypeOperation.VIREMENT);
+                    req.setDateOperation(LocalDate.now());
+                    req.setMontant(montant);
+                    req.setDevise(devise);
+                    req.setMotif(motif.isBlank() ? null : motif);
+                    req.setInstitutionEmettriceId(institutionEmettriceId);
+                    req.setNomInstitutionEmettrice(nomInstitutionEmettrice);
+                    req.setCompteDonneurOrdre(compteDO);
+                    req.setNomDonneurOrdre(nomDO);
+                    req.setNomDonneurOrdreEffectif(nomDOE.isBlank() ? null : nomDOE);
+                    req.setInstitutionBeneficiaireId(institutionBeneficiaireId);
+                    req.setNomInstitutionBeneficiaire(nomInstitutionBeneficiaire);
+                    req.setCompteBeneficiaire(compteBen);
+                    req.setNomBeneficiaire(nomBen);
+                    req.setNomBeneficiaireEffectif(nomBENE.isBlank() ? null : nomBENE);
+
+                    OperationDto created = create(req, userId, userName, institutionId);
+                    details.add(BulkOperationLineResult.builder()
+                            .numeroLigne(i)
+                            .succes(true)
+                            .referenceCreee(created.getReferenceUnique())
+                            .build());
+                    totalSucces++;
+                } catch (Exception e) {
+                    log.warn("[Bulk Import] Erreur ligne {} : {}", i, e.getMessage());
+                    details.add(BulkOperationLineResult.builder()
+                            .numeroLigne(i)
+                            .succes(false)
+                            .erreur(e.getMessage())
+                            .build());
+                    totalErreurs++;
+                }
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Erreur lecture fichier Excel : " + e.getMessage(), e);
+        }
+
+        log.info("[Bulk Import] {} opérations créées, {} erreurs — typeDebit={}", totalSucces, totalErreurs, typeDebit);
+        return BulkOperationResult.builder()
+                .totalLignes(totalSucces + totalErreurs)
+                .totalSucces(totalSucces)
+                .totalErreurs(totalErreurs)
+                .typeDebit(typeDebit)
+                .details(details)
+                .build();
+    }
+
+    /** Lit la valeur d'une cellule Excel comme String, en gérant tous les types. */
+    private String cellValue(org.apache.poi.ss.usermodel.Cell cell) {
+        if (cell == null) return "";
+        return switch (cell.getCellType()) {
+            case STRING  -> cell.getStringCellValue().trim();
+            case NUMERIC -> org.apache.poi.ss.usermodel.DateUtil.isCellDateFormatted(cell)
+                    ? cell.getLocalDateTimeCellValue().toLocalDate().toString()
+                    : String.valueOf(cell.getNumericCellValue());
+            case BOOLEAN -> String.valueOf(cell.getBooleanCellValue());
+            case FORMULA -> cell.getCachedFormulaResultType() == org.apache.poi.ss.usermodel.CellType.NUMERIC
+                    ? String.valueOf(cell.getNumericCellValue())
+                    : cell.getRichStringCellValue().getString().trim();
+            default -> "";
+        };
     }
 
     public SecurityScanResult runSecurityScan() {
